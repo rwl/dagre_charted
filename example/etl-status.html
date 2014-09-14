@@ -106,7 +106,7 @@
   .live.map .consumers,
   .live.map .name {
     margin-top: 4px;
-  } 
+  }
 
   .live.map .consumers:after {
     content: "x";
@@ -161,7 +161,7 @@
   </svg>
 </div>
 
-<script>
+<script type="application/dart">
 
   var workers = {
     'identifier': {
@@ -202,7 +202,7 @@
 
   var zoom = d3.behavior.zoom();
 
-  function draw(isUpdate) {
+  draw(isUpdate) {
     var nodes = [];
     var edges = [];
     for (var id in workers) {
@@ -237,21 +237,21 @@
 
     // Extend drawNodes function to set custom ID and class on nodes
     var oldDrawNodes = renderer.drawNodes();
-    renderer.drawNodes(function(graph, root) {
+    renderer.drawNodes((graph, root) {
       var svgNodes = oldDrawNodes(graph, root);
-      svgNodes.attr("id", function(u) { return "node-" + u; });
-      svgNodes.attr("class", function(u) { return "node " + graph.node(u).className; });
+      svgNodes.attr("id", (u) { return "node-" + u; });
+      svgNodes.attr("class", (u) { return "node " + graph.node(u).className; });
       return svgNodes;
     });
 
     // Custom transition function
-    function transition(selection) {
+    transition(selection) {
       return selection.transition().duration(500);
     }
     isUpdate && renderer.transition(transition);
 
-    renderer.zoom(function (graph, svg) {
-      return zoom.on('zoom', function() {
+    renderer.zoom((graph, svg) {
+      return zoom.on('zoom', () {
         svg.attr('transform', 'translate(' + d3.event.translate + ')scale(' + d3.event.scale + ')');
       });
     });
@@ -269,8 +269,8 @@
     var zoomScale = zoom.scale();
     var graphWidth = renderedLayout.graph().width + 80;
     var graphHeight = renderedLayout.graph().height + 40;
-    var width = parseInt(svg.style('width').replace(/px/, ''));
-    var height = parseInt(svg.style('height').replace(/px/, ''));
+    var width = parseInt(svg.style('width').replace("px", ''));
+    var height = parseInt(svg.style('height').replace("px", ''));
     zoomScale = Math.min(width / graphWidth, height / graphHeight);
     var translate = [(width/2) - ((graphWidth*zoomScale)/2), (height/2) - ((graphHeight*zoomScale)/2)];
     zoom.translate(translate);
@@ -278,26 +278,28 @@
     zoom.event(isUpdate ? svg.transition().duration(500) : d3.select('svg'));
   }
 
-  // Do some mock queue status updates
-  setInterval(function() {
-    var stoppedWorker1Count = workers['elasticsearch-writer'].count;
-    var stoppedWorker2Count = workers['meta-enricher'].count;
-    for (var id in workers) {
-      workers[id].count = Math.ceil(Math.random() * 3);
-      if (workers[id].inputThroughput) workers[id].inputThroughput = Math.ceil(Math.random() * 250);
-    }
-    workers['elasticsearch-writer'].count = stoppedWorker1Count + Math.ceil(Math.random() * 100);
-    workers['meta-enricher'].count = stoppedWorker2Count + Math.ceil(Math.random() * 100);
-    draw(true);
-  }, 1000);
+  main() {
+    // Do some mock queue status updates
+    setInterval(() {
+      var stoppedWorker1Count = workers['elasticsearch-writer'].count;
+      var stoppedWorker2Count = workers['meta-enricher'].count;
+      for (var id in workers) {
+        workers[id].count = Math.ceil(Math.random() * 3);
+        if (workers[id].inputThroughput) workers[id].inputThroughput = Math.ceil(Math.random() * 250);
+      }
+      workers['elasticsearch-writer'].count = stoppedWorker1Count + Math.ceil(Math.random() * 100);
+      workers['meta-enricher'].count = stoppedWorker2Count + Math.ceil(Math.random() * 100);
+      draw(true);
+    }, 1000);
 
-  // Do a mock change of worker configuration
-  setInterval(function() {
-    workers['elasticsearch-monitor'] = {
-      'consumers': 0,
-      'count': 0,
-      'inputQueue': 'elasticsearch-writer',
-      'inputThroughput': 50
-    }
-  }, 5000);
+    // Do a mock change of worker configuration
+    setInterval(() {
+      workers['elasticsearch-monitor'] = {
+        'consumers': 0,
+        'count': 0,
+        'inputQueue': 'elasticsearch-writer',
+        'inputThroughput': 50
+      };
+    }, 5000);
+  }
 </script>

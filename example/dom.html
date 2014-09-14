@@ -57,38 +57,40 @@ table td:last-child {
 support this technique.
 </section>
 
-<script id="js">
-// Create a new directed graph
-var g = new dagreD3.Digraph();
+<script type="application/dart">
+main() {
+  // Create a new directed graph
+  var g = new dagreD3.Digraph();
 
-g.addNode("root", {
-  label: function() {
-    var table = document.createElement("table"),
-        tr = d3.select(table).append("tr");
-    tr.append("td").text("A");
-    tr.append("td").text("B");
-    return table;
-  }
-});
-g.addNode("A", { label: "A", fill: "#afa" });
-g.addNode("B", { label: "B", fill: "#faa" });
-g.addEdge(null, "root", "A");
-g.addEdge(null, "root", "B");
+  g.addNode("root", {
+    label: () {
+      var table = document.createElement("table"),
+          tr = d3.select(table).append("tr");
+      tr.append("td").text("A");
+      tr.append("td").text("B");
+      return table;
+    }
+  });
+  g.addNode("A", { label: "A", fill: "#afa" });
+  g.addNode("B", { label: "B", fill: "#faa" });
+  g.addEdge(null, "root", "A");
+  g.addEdge(null, "root", "B");
 
-// Create the renderer
-var renderer = new dagreD3.Renderer();
+  // Create the renderer
+  var renderer = new dagreD3.Renderer();
 
-// Set up an SVG group so that we can translate the final graph.
-var svg = d3.select('svg'),
-    svgGroup = svg.append('g');
+  // Set up an SVG group so that we can translate the final graph.
+  var svg = d3.select('svg'),
+      svgGroup = svg.append('g');
 
-// Run the renderer. This is what draws the final graph.
-var layout = renderer.run(g, svgGroup);
+  // Run the renderer. This is what draws the final graph.
+  var layout = renderer.run(g, svgGroup);
 
-// Center the graph
-var xCenterOffset = (svg.attr('width') - layout.graph().width) / 2;
-svgGroup.attr('transform', 'translate(' + xCenterOffset + ', 20)');
-svg.attr('height', layout.graph().height + 40);
+  // Center the graph
+  var xCenterOffset = (svg.attr('width') - layout.graph().width) / 2;
+  svgGroup.attr('transform', 'translate(' + xCenterOffset + ', 20)');
+  svg.attr('height', layout.graph().height + 40);
+}
 </script>
 
-<script src="demo.js"></script>
+<script type="application/dart" src="demo.dart"></script>

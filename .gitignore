@@ -1,4 +1,9 @@
-/bower_components
-/build
-/dist
-/node_modules
+out/
+packages
+pubspec.lock
+
+.idea/
+dagre_d3.iml
+
+.project
+/.settings/
