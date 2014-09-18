@@ -1,6 +1,9 @@
 library dagre.d3;
 
 import 'dart:math' as Math;
+import 'dart:svg' as svg;
+
+import 'package:graphlib/graphlib.dart';
 import 'package:dagre/src/dagre.dart';
 import 'package:d3/d3.dart' as d3;
 
@@ -18,6 +21,10 @@ class Renderer {
   String edgeInterpolate = 'bundle';
 
   double edgeTension = 0.95;
+
+  bool zoomEnabled = true;
+
+  double initialZoom = 1.0;
 
   Renderer() {
 //    this.drawNodes(defaultDrawNodes);
@@ -142,11 +149,11 @@ class Renderer {
 
     svgNodes.each((u) {
       var attrs = g.node(u),
-          domNode = d3.select(this);
+          domNode = new d3.Selection.node(this);
       addLabel(attrs, domNode, true, 10, 10);
     });
 
-    this._transition(svgNodes.exit())
+    this.transition(svgNodes.exit())
         .style('opacity', 0)
         .remove();
 
@@ -167,9 +174,11 @@ class Renderer {
           .style('opacity', 0)
           .attr('class', 'edgeLabel enter');
 
-    svgEdgeLabels.each((e) { addLabel(g.edge(e), d3.select(this), false, 0, 0); });
+    svgEdgeLabels.each((e) {
+      addLabel(g.edge(e), new d3.Selection.node(this), false, 0, 0);
+    });
 
-    this._transition(svgEdgeLabels.exit())
+    this.transition(svgEdgeLabels.exit())
         .style('opacity', 0)
         .remove();
 
@@ -188,7 +197,7 @@ class Renderer {
       createArrowhead = null;
     } else if (g.graph().arrowheadFix != 'false' && g.graph().arrowheadFix != false) {
       createArrowhead() {
-        var strokeColor = d3.select(this).style('stroke');
+        var strokeColor = new d3.Selection.node(this).style('stroke');
         if (strokeColor) {
           var id = 'arrowhead-' + strokeColor.replace(r"[^a-zA-Z0-9]"/*g*/, '_');
           getOrMakeArrowhead(root, id).style('fill', strokeColor);
@@ -207,10 +216,12 @@ class Renderer {
 
     svgEdgePaths
       .selectAll('path')
-      .each((e) { applyStyle(g.edge(e).style, d3.select(this)); })
+      .each((e) {
+        applyStyle(g.edge(e).style, new d3.Selection.node(this));
+      })
       .attr('marker-end', createArrowhead);
 
-    this._transition(svgEdgePaths.exit())
+    this.transition(svgEdgePaths.exit())
         .style('opacity', 0)
         .remove();
 
@@ -220,13 +231,13 @@ class Renderer {
   positionNodes(g, svgNodes) {
     transform(u) {
       var value = g.node(u);
-      return 'translate(' + value.x + ',' + value.y + ')';
+      return 'translate(${value.x},${value.y})';
     }
 
     // For entering nodes, position immediately without transition
     svgNodes.filter('.enter').attr('transform', transform);
 
-    this._transition(svgNodes)
+    this.transition(svgNodes)
         .style('opacity', 1)
         .attr('transform', transform);
   }
@@ -235,20 +246,20 @@ class Renderer {
     transform(e) {
       var value = g.edge(e);
       var point = findMidPoint(value.points);
-      return 'translate(' + point.x + ',' + point.y + ')';
+      return 'translate(${point.x},${point.y})';
     }
 
     // For entering edge labels, position immediately without transition
     svgEdgeLabels.filter('.enter').attr('transform', transform);
 
-    this._transition(svgEdgeLabels)
+    this.transition(svgEdgeLabels)
       .style('opacity', 1)
       .attr('transform', transform);
   }
 
   positionEdgePaths(g, svgEdgePaths, root) {
-    var interpolate = this._edgeInterpolate,
-        tension = this._edgeTension;
+    var interpolate = this.edgeInterpolate,
+        tension = this.edgeTension;
 
     calcPoints(e) {
       var value = g.edge(e);
@@ -262,7 +273,7 @@ class Renderer {
       points.unshift(intersectNode(source, p0, root));
       points.push(intersectNode(target, p1, root));
 
-      return d3.svg.line()
+      return new d3.Line()
         .x((d) { return d.x; })
         .y((d) { return d.y; })
         .interpolate(interpolate)
@@ -273,13 +284,13 @@ class Renderer {
     svgEdgePaths.filter('.enter').selectAll('path')
         .attr('d', calcPoints);
 
-    this._transition(svgEdgePaths.selectAll('path'))
+    this.transition(svgEdgePaths.selectAll('path'))
         .attr('d', calcPoints)
         .style('opacity', 1);
   }
 
   // By default we do not use transitions
-  transition(selection) {
+  d3.Selection transition(d3.Selection selection) {
     return selection;
   }
 
@@ -287,10 +298,10 @@ class Renderer {
   zoomSetup(graph, svg) {
     var root = svg.property('ownerSVGElement');
     // If the svg node is the root, we get null, so set to svg.
-    if (!root) {
+    if (root == null) {
       root = svg;
     } else {
-      root = d3.select(root);
+      root = new d3.Selection.node(root);
     }
 
     if (root.select('rect.overlay').empty()) {
@@ -306,22 +317,28 @@ class Renderer {
       svg = svg.append('g')
         .attr('class', 'zoom');
 
-      if (this._zoom) {
-        root.call(this._zoom(graph, svg));
-      }
+      //if (this._zoom) {
+        //root.call(this._zoom(graph, svg));
+        this._zoom(root, graph, svg);
+      //}
     }
 
     return svg;
   }
 
+  _zoom(root, BaseGraph g, d3.Selection svg) {}
+
   // By default allow pan and zoom
-  zoom(graph, svg) {
-    return d3.behavior.zoom().on('zoom', () {
-      svg.attr('transform', 'translate(' + d3.event.translate + ')scale(' + d3.event.scale + ')');
-    });
+  zoom(BaseGraph graph, d3.Selection svg) {
+    if (zoomEnabled) {
+      var z = d3.behavior.zoom().on('zoom', () {
+        svg.attr('transform', 'translate(${d3.event.translate})scale(${d3.event.scale})');
+      });
+      z.scale(initialZoom).event(svg);
+    }
   }
 
-  postLayout() {
+  postLayout(BaseGraph g, d3.Selection svg) {
     // Do nothing
   }
 
@@ -362,7 +379,7 @@ class Renderer {
       } else {
         innerLabelSvg = addTextLabel(label,
                                      labelSvg,
-                                     Math.floor(node.labelCols),
+                                     node.labelCols.floor(),
                                      node.labelCut);
         applyStyle(node.labelStyle, innerLabelSvg);
       }
@@ -370,7 +387,7 @@ class Renderer {
       addForeignObjectElementFunction(label, labelSvg);
       // No margin for HTML elements
       marginX = marginY = 0;
-    } else if (label is Object) {
+    } else if (label is Map) {
       addForeignObjectElement(label, labelSvg);
       // No margin for HTML elements
       marginX = marginY = 0;
@@ -461,7 +478,7 @@ class Renderer {
   }
 
   addTextLabel(label, root, labelCols, labelCut) {
-    if (labelCut == undefined) { labelCut = 'false'; }
+    if (labelCut == null) { labelCut = 'false'; }
     labelCut = (labelCut.toString().toLowerCase() == 'true');
 
     var node = root
@@ -483,7 +500,7 @@ class Renderer {
     return node;
   }
 
-  run(graph, orgSvg) {
+  BaseGraph run(BaseGraph graph, d3.Selection orgSvg) {
     // First copy the input graph so that it is not changed by the rendering
     // process.
     graph = copyAndInitGraph(graph);
@@ -508,7 +525,7 @@ class Renderer {
     svgEdgeLabels.each((e) { calculateDimensions(this, graph.edge(e)); });
 
     // Now apply the layout function
-    var result = runLayout(graph, this.layout);
+    BaseGraph result = runLayout(graph, this.layout);
 
     // Copy useDef attribute from input graph to output graph
     graph.eachNode((u, a) {
@@ -533,10 +550,10 @@ class Renderer {
   }
 }
 
-copyAndInitGraph(graph) {
+copyAndInitGraph(BaseGraph graph) {
   var copy = graph.copy();
 
-  if (copy.graph() == undefined) {
+  if (copy.graph() == null) {
     copy.graph({});
   }
 
@@ -560,9 +577,9 @@ copyAndInitGraph(graph) {
   return copy;
 }
 
-copyObject(obj) {
+copyObject(Map obj) {
   var copy = {};
-  for (var k in obj) {
+  for (var k in obj.keys) {
     copy[k] = obj[k];
   }
   return copy;
@@ -574,26 +591,33 @@ calculateDimensions(group, value) {
   value.height = bbox.height;
 }
 
-runLayout(graph, layout) {
-  var result = layout.run(graph);
+BaseGraph runLayout(BaseGraph graph, Layout layout) {
+  final result = layout.run(graph);
 
-  // Copy labels to the result graph
-  graph.eachNode((u, value) { result.node(u).label = value.label; });
-  graph.eachEdge((e, u, v, value) { result.edge(e).label = value.label; });
+  // Copy labels to the result graph.
+  graph.eachNode((u, Map value) {
+    result.node(u)['label'] = value['label'];
+  });
+  graph.eachEdge((e, u, v, Map value) {
+    result.edge(e)['label'] = value['label'];
+  });
 
   return result;
 }
 
 isEllipse(obj) {
-  return Object.prototype.toString.call(obj) == '[object SVGEllipseElement]';
+  //return Object.prototype.toString.call(obj) == '[object SVGEllipseElement]';
+  return obj is svg.EllipseElement;
 }
 
 isCircle(obj) {
-  return Object.prototype.toString.call(obj) == '[object SVGCircleElement]';
+  //return Object.prototype.toString.call(obj) == '[object SVGCircleElement]';
+  return obj is svg.CircleElement;
 }
 
 isPolygon(obj) {
-  return Object.prototype.toString.call(obj) == '[object SVGPolygonElement]';
+  //return Object.prototype.toString.call(obj) == '[object SVGPolygonElement]';
+  return obj is svg.PolygonElement;
 }
 
 intersectNode(nd, p1, root) {
@@ -613,26 +637,26 @@ intersectNode(nd, p1, root) {
 }
 
 
-getOrMakeArrowhead(root, id) {
-  var search = root.select('#' + id);
+d3.Selection getOrMakeArrowhead(root, id) {
+  d3.Selection search = root.select('#$id');
   if (!search.empty()) { return search; }
 
-  var defs = root.select('defs');
+  d3.Selection defs = root.select('defs');
   if (defs.empty()) {
     defs = root.append('svg:defs');
   }
 
-  var marker =
+  final marker =
     defs
       .append('svg:marker')
-        .attr('id', id)
-        .attr('viewBox', '0 0 10 10')
-        .attr('refX', 8)
-        .attr('refY', 5)
-        .attr('markerUnits', 'strokeWidth')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 5)
-        .attr('orient', 'auto');
+        ..attr('id', id)
+        ..attr('viewBox', '0 0 10 10')
+        ..attr('refX', 8)
+        ..attr('refY', 5)
+        ..attr('markerUnits', 'strokeWidth')
+        ..attr('markerWidth', 8)
+        ..attr('markerHeight', 5)
+        ..attr('orient', 'auto');
 
   marker
     .append('svg:path')
@@ -643,12 +667,15 @@ getOrMakeArrowhead(root, id) {
 
 // Thanks to
 // http://james.padolsey.com/javascript/wordwrap-for-javascript/
-wordwrap (str, [width=75, cut=false, brk='\n']) {
-  if (!str) { return str; }
+String wordwrap(String str, [num width=75, bool cut=false, String brk='\n']) {
+  if (str == null || str.length == 0) { return str; }
 
-  var regex = '.{1,' + width + r'}(\\s|$)' + (cut ? '|.{' + width + r'}|.+$' : r'|\\S+?(\\s|$)');
+  var regex = r'.{1,' + width.toString() + r'}(\\s|$)' +
+      (cut ? r'|.{' + width.toString() + r'}|.+$' : r'|\\S+?(\\s|$)');
 
-  return str.match(new RegExp(regex, 'g')).join(brk);
+  return new RegExp(regex).allMatches(str).map((Match m) {
+    return m.group(0);
+  }).join(brk);
 }
 
 findMidPoint(points) {
@@ -658,7 +685,7 @@ findMidPoint(points) {
   } else {
     var p0 = points[midIdx - 1];
     var p1 = points[midIdx];
-    return {x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2};
+    return {'x': (p0.x + p1.x) / 2, 'y': (p0.y + p1.y) / 2};
   }
 }
 
@@ -690,7 +717,7 @@ intersectRect(rect, point) {
     sy = dx == 0 ? 0 : w * dy / dx;
   }
 
-  return {x: x + sx, y: y + sy};
+  return {'x': x + sx, 'y': y + sy};
 }
 
 intersectEllipse(node, ellipseOrCircle, point) {
@@ -712,16 +739,16 @@ intersectEllipse(node, ellipseOrCircle, point) {
 
   var det = Math.sqrt(rx * rx * py * py + ry * ry * px * px);
 
-  var dx = Math.abs(rx * ry * px / det);
+  var dx = (rx * ry * px / det).abs();
   if (point.x < cx) {
     dx = -dx;
   }
-  var dy = Math.abs(rx * ry * py / det);
+  var dy = (rx * ry * py / det).abs();
   if (point.y < cy) {
     dy = -dy;
   }
 
-  return {x: cx + dx, y: cy + dy};
+  return {'x': cx + dx, 'y': cy + dy};
 }
 
 sameSign(r1, r2) {
@@ -780,7 +807,7 @@ intersectLine(x1, y1, x2, y2, x3, y3, x4, y4, intersections) {
     return /*COLLINEAR*/;
   }
 
-  offset = Math.abs(denom / 2);
+  offset = (denom / 2).abs();
 
   // The denom/2 is to get rounding instead of truncating. It
   // is added or subtracted to the numerator, depending upon the
@@ -821,7 +848,7 @@ intersectPolygon(node, polygon, point) {
   }
 
   if (intersections.length == 1) {
-    return {x: intersections[0][0], y: intersections[0][1]};
+    return {'x': intersections[0][0], 'y': intersections[0][1]};
   }
 
   if (intersections.length > 1) {
@@ -837,9 +864,9 @@ intersectPolygon(node, polygon, point) {
 
       return (distp < distq) ? -1 : (distp == distq ? 0 : 1);
     });
-    return {x: intersections[0][0], y: intersections[0][1]};
+    return {'x': intersections[0][0], 'y': intersections[0][1]};
   } else {
-    console.log('NO INTERSECTION FOUND, RETURN NODE CENTER', node);
+    print('NO INTERSECTION FOUND, RETURN NODE CENTER');//, node);
     return node;
   }
 }
