@@ -5,7 +5,7 @@ main() {
       cssElem = d3.select('#css'),
       cssPanel = bodyElem.append('div').attr('id', 'cssPanel');
 
-  function setupPanel(panel, elem, title) {
+  setupPanel(panel, elem, title) {
     panel.append('h2').text(title);
     return panel.append('pre').append('code').text(elem.html().trim());
   }
