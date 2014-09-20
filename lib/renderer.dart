@@ -132,7 +132,7 @@ class Renderer {
     return this;
   }*/
 
-  drawNodes(BaseGraph g, d3.Selection root) {
+  d3.Selection drawNodes(BaseGraph g, d3.Selection root) {
     final nodes = g.nodes().where((u) { return !isComposite(g, u); });
 
     final svgNodes = root
@@ -161,7 +161,7 @@ class Renderer {
     return svgNodes;
   }
 
-  drawEdgeLabels(BaseGraph g, d3.Selection root) {
+  d3.Selection drawEdgeLabels(BaseGraph g, d3.Selection root) {
     d3.Selection svgEdgeLabels = root
       .selectAll('g.edgeLabel')
       ..classed('enter', false)
@@ -186,26 +186,26 @@ class Renderer {
     return svgEdgeLabels;
   }
 
-  Object drawEdgePaths(g, root) {
-    var svgEdgePaths = root
+  Object drawEdgePaths(BaseGraph g, d3.Selection root) {
+    d3.Selection svgEdgePaths = root
       .selectAll('g.edgePath')
-      .classed('enter', false)
-      .data(g.edges(), (e) { return e; });
+      ..classed('enter', false)
+      ..data(g.edges(), (n, e, i) { return e; });
 
-    var DEFAULT_ARROWHEAD = 'url(#arrowhead)',
-        createArrowhead = DEFAULT_ARROWHEAD;
+    const DEFAULT_ARROWHEAD = 'url(#arrowhead)';
+    var createArrowhead = DEFAULT_ARROWHEAD;
     if (!g.isDirected()) {
       createArrowhead = null;
-    } else if (g.graph().arrowheadFix != 'false' && g.graph().arrowheadFix != false) {
-      createArrowhead() {
-        var strokeColor = new d3.Selection.node(this).nodeStyle('stroke');
+    } else if (g.graph()['arrowheadFix'] != 'false' && g.graph()['arrowheadFix'] != false) {
+      createArrowhead = (Element node, Object data, int i, int j) {
+        var strokeColor = new d3.Selection.node(node).nodeStyle('stroke');
         if (strokeColor) {
           var id = 'arrowhead-' + strokeColor.replaceAll(r"[^a-zA-Z0-9]"/*g*/, '_');
           getOrMakeArrowhead(root, id).style('fill', strokeColor);
           return 'url(#' + id + ')';
         }
         return DEFAULT_ARROWHEAD;
-      }
+      };
     }
 
     svgEdgePaths
@@ -217,77 +217,77 @@ class Renderer {
 
     svgEdgePaths
       .selectAll('path')
-      .each((e) {
-        applyStyle(g.edge(e).style, new d3.Selection.node(this));
+      ..each((Element node, Object e, int i, int j) {
+        applyStyle(g.edge(e).style, new d3.Selection.node(node));
       })
-      .attr('marker-end', createArrowhead);
+      ..attr('marker-end', createArrowhead);
 
     this.transition(svgEdgePaths.exit())
-        .style('opacity', 0)
-        .remove();
+        ..style('opacity', 0)
+        ..remove();
 
     return svgEdgePaths;
   }
 
-  positionNodes(g, svgNodes) {
-    transform(u) {
-      var value = g.node(u);
-      return 'translate(${value.x},${value.y})';
+  void positionNodes(BaseGraph g, d3.Selection svgNodes) {
+    transform(Element node, Object u, int i, int j) {
+      Map value = g.node(u);
+      return 'translate(${value['x']},${value['y']})';
     }
 
     // For entering nodes, position immediately without transition
     svgNodes.filter('.enter').attr('transform', transform);
 
     this.transition(svgNodes)
-        .style('opacity', 1)
-        .attr('transform', transform);
+        ..style('opacity', 1)
+        ..attrFunc('transform', transform);
   }
 
-  positionEdgeLabels(g, svgEdgeLabels) {
-    transform(e) {
+  void positionEdgeLabels(BaseGraph g, d3.Selection svgEdgeLabels) {
+    transform(Element node, Object e, int i, int j) {
       var value = g.edge(e);
       var point = findMidPoint(value.points);
       return 'translate(${point.x},${point.y})';
     }
 
     // For entering edge labels, position immediately without transition
-    svgEdgeLabels.filter('.enter').attr('transform', transform);
 
+    svgEdgeLabels.filter('.enter').attr('transform', transform);
     this.transition(svgEdgeLabels)
-      .style('opacity', 1)
-      .attr('transform', transform);
+      ..style('opacity', 1)
+      ..attrFunc('transform', transform);
   }
 
-  positionEdgePaths(g, svgEdgePaths, root) {
-    var interpolate = this.edgeInterpolate,
+  void positionEdgePaths(BaseGraph g, d3.Selection svgEdgePaths, d3.Selection root) {
+    final interpolate = this.edgeInterpolate,
         tension = this.edgeTension;
 
-    calcPoints(e) {
-      var value = g.edge(e);
-      var source = g.node(g.incidentNodes(e)[0]);
-      var target = g.node(g.incidentNodes(e)[1]);
-      var points = value.points.slice();
+    calcPoints(Element node, Object e, int i, int j) {
+      Map value = g.edge(e);
+      Map source = g.node(g.incidentNodes(e)[0]);
+      Map target = g.node(g.incidentNodes(e)[1]);
+      List points = value['points'].toList();
 
       var p0 = points.length == 0 ? target : points[0];
       var p1 = points.length == 0 ? source : points[points.length - 1];
 
-      points.unshift(intersectNode(source, p0, root));
-      points.push(intersectNode(target, p1, root));
+      points.insert(0, intersectNode(source, p0, root));
+      points.add(intersectNode(target, p1, root));
 
-      return new d3.Line()
-        .x((d) { return d.x; })
-        .y((d) { return d.y; })
-        .interpolate(interpolate)
-        .tension(tension)
-        (points);
+      return (new d3.Line()
+        ..x = (d) { return d.x; }
+        ..y = (d) { return d.y; }
+        ..interpolate = interpolate
+        ..tension = tension)
+        .line(points);
     }
 
     svgEdgePaths.filter('.enter').selectAll('path')
-        .attr('d', calcPoints);
+        .attrFunc('d', calcPoints);
 
     this.transition(svgEdgePaths.selectAll('path'))
-        .attr('d', calcPoints)
-        .style('opacity', 1);
+        ..attr('d', calcPoints)
+        ..style('opacity', 1);
   }
 
   // By default we do not use transitions
@@ -296,8 +296,8 @@ class Renderer {
   }
 
   // Setup dom for zooming
-  zoomSetup(graph, svg) {
-    var root = svg.property('ownerSVGElement');
+  d3.Selection zoomSetup(BaseGraph graph, d3.Selection svg) {
+    d3.Selection root = svg.property('ownerSVGElement');
     // If the svg node is the root, we get null, so set to svg.
     if (root == null) {
       root = svg;
@@ -308,15 +308,15 @@ class Renderer {
     if (root.select('rect.overlay').empty()) {
       // Create an overlay for capturing mouse events that don't touch foreground
       root.insert('rect', ':first-child')
-        .attr('class', 'overlay')
-        .attr('width', '100%')
-        .attr('height', '100%')
-        .style('fill', 'none')
-        .style('pointer-events', 'all');
+        ..attr('class', 'overlay')
+        ..attr('width', '100%')
+        ..attr('height', '100%')
+        ..style('fill', 'none')
+        ..style('pointer-events', 'all');
 
       // Capture the zoom behaviour from the svg
       svg = svg.append('g')
-        .attr('class', 'zoom');
+        ..attr('class', 'zoom');
 
       //if (this._zoom) {
         //root.call(this._zoom(graph, svg));
@@ -327,9 +327,11 @@ class Renderer {
     return svg;
   }
 
-  _zoom(root, BaseGraph g, d3.Selection svg) {}
+  _zoom(d3.Selection root, BaseGraph g, d3.Selection svg) {
+    // Do nothing
+  }
 
-  // By default allow pan and zoom
+  // By default allow pan and zoom.
   zoom(BaseGraph graph, d3.Selection svg) {
     if (zoomEnabled) {
       var z = d3.behavior.zoom().on('zoom', () {
@@ -353,13 +355,13 @@ class Renderer {
 
   addLabel(Map node, d3.Selection root, bool addingNode, num marginX, num marginY) {
     // If the node has 'useDef' meta data, we rely on that
-    if (node.containsKey('useDef') && node['useDef']) {
-      root.append('use').attr('xlink:href', '#' + node['useDef']);
+    if (node.containsKey('useDef')) {
+      root.append('use').attr('xlink:href', '#${node['useDef']}');
       return;
     }
     // Add the rect first so that it appears behind the label
     var label = node['label'];
-    var rect = root.append('rect');
+    d3.Selection rect = root.append('rect');
     if (node.containsKey('width')) {
       rect.attr('width', node['width']);
     }
@@ -401,13 +403,13 @@ class Renderer {
     final bbox = root.node.getBBox();
 
     rect
-      .attr('rx', node.containsKey('rx') ? node['rx'] : 5)
-      .attr('ry', node.containsKey('ry') ? node['ry'] : 5)
-      .attr('x', -(bbox.width / 2 + marginX))
-      .attr('y', -(bbox.height / 2 + marginY))
-      .attr('width', bbox.width + 2 * marginX)
-      .attr('height', bbox.height + 2 * marginY)
-      .attr('fill', '#fff');
+      ..attr('rx', node.containsKey('rx') ? node['rx'] : 5)
+      ..attr('ry', node.containsKey('ry') ? node['ry'] : 5)
+      ..attr('x', -(bbox.width / 2 + marginX))
+      ..attr('y', -(bbox.height / 2 + marginY))
+      ..attr('width', bbox.width + 2 * marginX)
+      ..attr('height', bbox.height + 2 * marginY)
+      ..attr('fill', '#fff');
 
     if (addingNode) {
       applyStyle(node['style'], rect);
@@ -430,31 +432,31 @@ class Renderer {
 
       if (node.containsKey('href')) {
         root
-          .attr('class', root.nodeAttr('class') + ' clickable')
-          .on('click', () {
+          ..attr('class', root.nodeAttr('class') + ' clickable')
+          ..on('click', () {
             window.open(node['href']);
           });
       }
     }
   }
 
-  addForeignObject(modifier, root) {
-    var fo = root
+  void addForeignObject(modifier(d3.Selection e), d3.Selection root) {
+    final fo = root
       .append('foreignObject')
-        .attr('width', '100000');
+        ..attr('width', '100000');
 
-    var div = fo
+    final div = fo
       .append('xhtml:div')
-        .style('float', 'left');
+        ..style('float', 'left');
 
     modifier(div);
 
     // TODO find a better way to get dimensions for foreignObjects...
-    var w, h;
+    int w, h;
     div
-      .each(() {
-        w = this.clientWidth;
-        h = this.clientHeight;
+      .each((Element node, Object e, int i, int j) {
+        w = node.clientWidth;
+        h = node.clientHeight;
       });
 
     fo
@@ -463,39 +465,43 @@ class Renderer {
   }
 
   addForeignObjectLabel(String label, d3.Selection root) {
-    addForeignObject((e) {
-      e.html(() { return label; });
+    addForeignObject((d3.Selection e) {
+      e.htmlFunc((n, d, i, j) { return label; });
     }, root);
   }
 
   addForeignObjectElementFunction(Function elemFunc, d3.Selection root) {
-    addForeignObject((e) {
+    addForeignObject((d3.Selection e) {
       e.insert(elemFunc);
     }, root);
   }
 
   addForeignObjectElement(Map elem, d3.Selection root) {
-    addForeignObjectElementFunction(() { return elem; }, root);
+    addForeignObjectElementFunction(() {
+      return elem;
+    }, root);
   }
 
-  addTextLabel(String label, d3.Selection root, num labelCols, bool labelCut) {
-    if (labelCut == null) { labelCut = 'false'; }
+  d3.Selection addTextLabel(String label, d3.Selection root, num labelCols, bool labelCut) {
+    if (labelCut == null) {
+      labelCut = 'false';
+    }
     labelCut = (labelCut.toString().toLowerCase() == 'true');
 
-    var node = root
+    final node = root
       .append('text')
-      .attr('text-anchor', 'left');
+      ..attr('text-anchor', 'left');
 
-    label = label.replace(r"\\n"/*g*/, '\n');
+    label = label.replaceAll(r"\\n"/*g*/, '\n');
 
-    var arr = labelCols ? wordwrap(label, labelCols, labelCut) : label;
+    var arr = labelCols != null ? wordwrap(label, labelCols, labelCut) : label;
     arr = arr.split('\n');
     for (var i = 0; i < arr.length; i++) {
       node
         .append('tspan')
-          .attr('dy', '1em')
-          .attr('x', '1')
-          .text(arr[i]);
+          ..attr('dy', '1em')
+          ..attr('x', '1')
+          ..text(arr[i]);
     }
 
     return node;
@@ -506,79 +512,87 @@ class Renderer {
     // process.
     graph = copyAndInitGraph(graph);
 
-    // Create zoom elements
-    var svg = this.zoomSetup(graph, orgSvg);
+    // Create zoom elements.
+    final svg = zoomSetup(graph, orgSvg);
 
     // Create layers
     svg
       .selectAll('g.edgePaths, g.edgeLabels, g.nodes')
       .data(['edgePaths', 'edgeLabels', 'nodes'])
       .enter()
-        .append('g')
-        .attr('class', (d) { return d; });
+        ..append('g')
+        ..attr('class', (d) { return d; });
 
     // Create node and edge roots, attach labels, and capture dimension
     // information for use with layout.
-    var svgNodes = this.drawNodes(graph, svg.select('g.nodes'));
-    var svgEdgeLabels = this.drawEdgeLabels(graph, svg.select('g.edgeLabels'));
+    final svgNodes = drawNodes(graph, svg.select('g.nodes'));
+    final svgEdgeLabels = drawEdgeLabels(graph, svg.select('g.edgeLabels'));
 
-    svgNodes.each((u) { calculateDimensions(this, graph.node(u)); });
-    svgEdgeLabels.each((e) { calculateDimensions(this, graph.edge(e)); });
+    svgNodes.each((Element node, Object u, int i, int j) {
+      calculateDimensions(this, graph.node(u));
+    });
+    svgEdgeLabels.each((Element node, Object e, int i, int j) {
+      calculateDimensions(this, graph.edge(e));
+    });
 
     // Now apply the layout function
-    BaseGraph result = runLayout(graph, this.layout);
+    BaseGraph result = runLayout(graph, layout);
 
     // Copy useDef attribute from input graph to output graph
-    graph.eachNode((u, a) {
-      if (a.useDef) {
-        result.node(u).useDef = a.useDef;
+    graph.eachNode((u, Map a) {
+      if (a.containsKey('useDef')) {
+        result.node(u)['useDef'] = a['useDef'];
       }
     });
 
     // Run any user-specified post layout processing
-    this.postLayout(result, svg);
+    postLayout(result, svg);
 
-    var svgEdgePaths = this.drawEdgePaths(graph, svg.select('g.edgePaths'));
+    final svgEdgePaths = drawEdgePaths(graph, svg.select('g.edgePaths'));
 
     // Apply the layout information to the graph
-    this.positionNodes(result, svgNodes);
-    this.positionEdgeLabels(result, svgEdgeLabels);
-    this.positionEdgePaths(result, svgEdgePaths, orgSvg);
+    positionNodes(result, svgNodes);
+    positionEdgeLabels(result, svgEdgeLabels);
+    positionEdgePaths(result, svgEdgePaths, orgSvg);
 
-    this.postRender(result, svg);
+    postRender(result, svg);
 
     return result;
   }
 }
 
-copyAndInitGraph(BaseGraph graph) {
-  var copy = graph.copy();
+BaseGraph copyAndInitGraph(BaseGraph graph) {
+  final copy = graph.copy();
 
   if (copy.graph() == null) {
     copy.graph({});
   }
 
   if (!(copy.graph().containsKey('arrowheadFix'))) {
-    copy.graph().arrowheadFix = true;
+    copy.graph()['arrowheadFix'] = true;
   }
 
-  // Init labels if they were not present in the source graph
+  // Init labels if they were not present in the source graph.
   copy.nodes().forEach((u) {
-    var value = copyObject(copy.node(u));
+    final value = copyObject(copy.node(u));
     copy.node(u, value);
-    if (!(value.containsKey('label'))) { value.label = ''; }
+    if (!(value.containsKey('label'))) {
+      value['label'] = '';
+    }
   });
 
   copy.edges().forEach((e) {
     var value = copyObject(copy.edge(e));
     copy.edge(e, value);
-    if (!(value.containsKey('label'))) { value.label = ''; }
+    if (!(value.containsKey('label'))) {
+      value['label'] = '';
+    }
   });
 
   return copy;
 }
 
-copyObject(Map obj) {
+Map copyObject(Map obj) {
   var copy = {};
   for (var k in obj.keys) {
     copy[k] = obj[k];
@@ -586,10 +600,10 @@ copyObject(Map obj) {
   return copy;
 }
 
-calculateDimensions(group, value) {
+calculateDimensions(Element group, Map value) {
   var bbox = group.getBBox();
-  value.width = bbox.width;
-  value.height = bbox.height;
+  value['width'] = bbox.width;
+  value['height'] = bbox.height;
 }
 
 BaseGraph runLayout(BaseGraph graph, Layout layout) {
@@ -621,10 +635,10 @@ isPolygon(obj) {
   return obj is svg.PolygonElement;
 }
 
-intersectNode(nd, p1, root) {
-  if (nd.useDef) {
-    var definedFig = root.select('defs #' + nd.useDef).node();
-    if (definedFig) {
+intersectNode(Map nd, p1, d3.Selection root) {
+  if (nd.containsKey('useDef')) {
+    var definedFig = root.select("defs #${nd['useDef']}").node;
+    if (definedFig != null) {
       var outerFig = definedFig.childNodes[0];
       if (isCircle(outerFig) || isEllipse(outerFig)) {
         return intersectEllipse(nd, outerFig, p1);
@@ -638,7 +652,7 @@ intersectNode(nd, p1, root) {
 }
 
 
-d3.Selection getOrMakeArrowhead(root, id) {
+d3.Selection getOrMakeArrowhead(d3.Selection root, id) {
   d3.Selection search = root.select('#$id');
   if (!search.empty()) { return search; }
 
@@ -661,7 +675,7 @@ d3.Selection getOrMakeArrowhead(root, id) {
 
   marker
     .append('svg:path')
-      .attr('d', 'M 0 0 L 10 5 L 0 10 z');
+      ..attr('d', 'M 0 0 L 10 5 L 0 10 z');
 
   return marker;
 }
@@ -679,9 +693,9 @@ String wordwrap(String str, [num width=75, bool cut=false, String brk='\n']) {
   }).join(brk);
 }
 
-findMidPoint(points) {
+Map findMidPoint(List points) {
   var midIdx = points.length / 2;
-  if (points.length % 2) {
+  if (points.length % 2 != 0) {
     return points[(midIdx).floor()];
   } else {
     var p0 = points[midIdx - 1];
@@ -690,18 +704,18 @@ findMidPoint(points) {
   }
 }
 
-intersectRect(rect, point) {
-  var x = rect.x;
-  var y = rect.y;
+intersectRect(Map rect, Math.Point point) {
+  final x = rect['x'];
+  final y = rect['y'];
 
   // Rectangle intersection algorithm from:
   // http://math.stackexchange.com/questions/108113/find-edge-between-two-boxes
-  var dx = point.x - x;
-  var dy = point.y - y;
-  var w = rect.width / 2;
-  var h = rect.height / 2;
+  final dx = point.x - x;
+  final dy = point.y - y;
+  num w = rect['width'] / 2;
+  num h = rect['height'] / 2;
 
-  var sx, sy;
+  num sx, sy;
   if (dy.abs() * w > dx.abs() * h) {
     // Intersection is top or bottom of rect.
     if (dy < 0) {
@@ -721,12 +735,12 @@ intersectRect(rect, point) {
   return {'x': x + sx, 'y': y + sy};
 }
 
-intersectEllipse(node, ellipseOrCircle, point) {
+intersectEllipse(Map node, Element ellipseOrCircle, Math.Point point) {
   // Formulae from: http://mathworld.wolfram.com/Ellipse-LineIntersection.html
 
-  var cx = node.x;
-  var cy = node.y;
-  var rx, ry;
+  final cx = node['x'];
+  final cy = node['y'];
+  num rx, ry;
 
   if (isCircle(ellipseOrCircle)) {
     rx = ry = ellipseOrCircle.r.baseVal.value;
@@ -735,12 +749,12 @@ intersectEllipse(node, ellipseOrCircle, point) {
     ry = ellipseOrCircle.ry.baseVal.value;
   }
 
-  var px = cx - point.x;
-  var py = cy - point.y;
+  final px = cx - point.x;
+  final py = cy - point.y;
 
-  var det = Math.sqrt(rx * rx * py * py + ry * ry * px * px);
+  final det = Math.sqrt(rx * rx * py * py + ry * ry * px * px);
 
-  var dx = (rx * ry * px / det).abs();
+  num dx = (rx * ry * px / det).abs();
   if (point.x < cx) {
     dx = -dx;
   }
@@ -752,33 +766,33 @@ intersectEllipse(node, ellipseOrCircle, point) {
   return {'x': cx + dx, 'y': cy + dy};
 }
 
-sameSign(r1, r2) {
+bool sameSign(num r1, num r2) {
   return r1 * r2 > 0;
 }
 
 // Add point to the found intersections, but check first that it is unique.
-addPoint(x, y, intersections) {
-  if (!intersections.some((elm) { return elm[0] == x && elm[1] == y; })) {
-    intersections.push([x, y]);
+void addPoint(num x, num y, List intersections) {
+  if (!intersections.any((elm) { return elm[0] == x && elm[1] == y; })) {
+    intersections.add([x, y]);
   }
 }
 
-intersectLine(x1, y1, x2, y2, x3, y3, x4, y4, intersections) {
+void intersectLine(num x1, num y1, num x2, num y2, num x3, num y3, num x4, num y4, List intersections) {
   // Algorithm from J. Avro, (ed.) Graphics Gems, No 2, Morgan Kaufmann, 1994, p7 and p473.
 
-  var a1, a2, b1, b2, c1, c2;
-  var r1, r2 , r3, r4;
-  var denom, offset, num;
-  var x, y;
+//  var a1, a2, b1, b2, c1, c2;
+//  var r1, r2 , r3, r4;
+//  var denom, offset, num;
+//  var x, y;
 
   // Compute a1, b1, c1, where line joining points 1 and 2 is F(x,y) = a1 x + b1 y + c1 = 0.
-  a1 = y2 - y1;
-  b1 = x1 - x2;
-  c1 = (x2 * y1) - (x1 * y2);
+  final a1 = y2 - y1;
+  final b1 = x1 - x2;
+  final c1 = (x2 * y1) - (x1 * y2);
 
   // Compute r3 and r4.
-  r3 = ((a1 * x3) + (b1 * y3) + c1);
-  r4 = ((a1 * x4) + (b1 * y4) + c1);
+  final r3 = ((a1 * x3) + (b1 * y3) + c1);
+  final r4 = ((a1 * x4) + (b1 * y4) + c1);
 
   // Check signs of r3 and r4. If both point 3 and point 4 lie on
   // same side of line 1, the line segments do not intersect.
@@ -787,13 +801,13 @@ intersectLine(x1, y1, x2, y2, x3, y3, x4, y4, intersections) {
   }
 
   // Compute a2, b2, c2 where line joining points 3 and 4 is G(x,y) = a2 x + b2 y + c2 = 0
-  a2 = y4 - y3;
-  b2 = x3 - x4;
-  c2 = (x4 * y3) - (x3 * y4);
+  final a2 = y4 - y3;
+  final b2 = x3 - x4;
+  final c2 = (x4 * y3) - (x3 * y4);
 
   // Compute r1 and r2
-  r1 = (a2 * x1) + (b2 * y1) + c2;
-  r2 = (a2 * x2) + (b2 * y2) + c2;
+  final r1 = (a2 * x1) + (b2 * y1) + c2;
+  final r2 = (a2 * x2) + (b2 * y2) + c2;
 
   // Check signs of r1 and r2. If both point 1 and point 2 lie
   // on same side of second line segment, the line segments do
@@ -803,48 +817,48 @@ intersectLine(x1, y1, x2, y2, x3, y3, x4, y4, intersections) {
   }
 
   // Line segments intersect: compute intersection point.
-  denom = (a1 * b2) - (a2 * b1);
+  final denom = (a1 * b2) - (a2 * b1);
   if (denom == 0) {
     return /*COLLINEAR*/;
   }
 
-  offset = (denom / 2).abs();
+  final offset = (denom / 2).abs();
 
   // The denom/2 is to get rounding instead of truncating. It
   // is added or subtracted to the numerator, depending upon the
   // sign of the numerator.
-  num = (b1 * c2) - (b2 * c1);
-  x = (num < 0) ? ((num - offset) / denom) : ((num + offset) / denom);
+  num n = (b1 * c2) - (b2 * c1);
+  final x = (n < 0) ? ((n - offset) / denom) : ((n + offset) / denom);
 
-  num = (a2 * c1) - (a1 * c2);
-  y = (num < 0) ? ((num - offset) / denom) : ((num + offset) / denom);
+  n = (a2 * c1) - (a1 * c2);
+  final y = (n < 0) ? ((n - offset) / denom) : ((n + offset) / denom);
 
   // lines_intersect
   addPoint(x, y, intersections);
 }
 
-intersectPolygon(node, polygon, point) {
-  var x1 = node.x;
-  var y1 = node.y;
-  var x2 = point.x;
-  var y2 = point.y;
+intersectPolygon(Map node, Element polygon, Math.Point point) {
+  final x1 = node['x'];
+  final y1 = node['y'];
+  final x2 = point.x;
+  final y2 = point.y;
 
-  var intersections = [];
-  var points = polygon.points;
+  final intersections = [];
+  List points = polygon.points;
 
-  var minx = 100000, miny = 100000;
-  for (var j = 0; j < points.numberOfItems; j++) {
-    var p = points.getItem(j);
+  num minx = 100000, miny = 100000;
+  for (int j = 0; j < points.length; j++) {
+    var p = points[j];
     minx = Math.min(minx, p.x);
     miny = Math.min(miny, p.y);
   }
 
-  var left = x1 - node.width / 2 - minx;
-  var top =  y1 - node.height / 2 - miny;
+  final left = x1 - node['width'] / 2 - minx;
+  final top =  y1 - node['height'] / 2 - miny;
 
-  for (var i = 0; i < points.numberOfItems; i++) {
-    var p1 = points.getItem(i);
-    var p2 = points.getItem(i < points.numberOfItems - 1 ? i + 1 : 0);
+  for (var i = 0; i < points.length; i++) {
+    final p1 = points[i];
+    final p2 = points[i < points.length - 1 ? i + 1 : 0];
     intersectLine(x1, y1, x2, y2, left + p1.x, top + p1.y, left + p2.x, top + p2.y, intersections);
   }
 
@@ -872,9 +886,9 @@ intersectPolygon(node, polygon, point) {
   }
 }
 
-isComposite(g, u) {
-  return g.containsKey('children') && g.children(u).length;
-}
+//bool isComposite(g, u) {
+//  return g.containsKey('children') && g.children(u).length;
+//}
 
 /*bind(func, thisArg) {
   // For some reason PhantomJS occassionally fails when using the builtin bind,
