@@ -133,7 +133,7 @@ class Renderer {
   }*/
 
   d3.Selection drawNodes(BaseGraph g, d3.Selection root) {
-    final nodes = g.nodes().where((u) { return !isComposite(g, u); });
+    final nodes = g.nodes().where((u) { return !g.isCompound(); });
 
     final svgNodes = root
       .selectAll('g.node')
@@ -155,8 +155,8 @@ class Renderer {
     });
 
     this.transition(svgNodes.exit())
-        .style('opacity', 0)
-        .remove();
+        ..style('opacity', 0)
+        ..remove();
 
     return svgNodes;
   }
