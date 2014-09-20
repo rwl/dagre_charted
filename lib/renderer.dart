@@ -1,5 +1,6 @@
 library dagre.d3;
 
+import 'dart:html' show Element, window;
 import 'dart:math' as Math;
 import 'dart:svg' as svg;
 
@@ -131,25 +132,25 @@ class Renderer {
     return this;
   }*/
 
-  drawNodes(g, root) {
-    var nodes = g.nodes().filter((u) { return !isComposite(g, u); });
+  drawNodes(BaseGraph g, d3.Selection root) {
+    final nodes = g.nodes().where((u) { return !isComposite(g, u); });
 
-    var svgNodes = root
+    final svgNodes = root
       .selectAll('g.node')
-      .classed('enter', false)
-      .data(nodes, (u) { return u; });
+      ..classed('enter', false)
+      ..data(nodes, (_, u, i) { return u; });
 
     svgNodes.selectAll('*').remove();
 
     svgNodes
       .enter()
         .append('g')
-          .style('opacity', 0)
-          .attr('class', 'node enter');
+          ..style('opacity', 0)
+          ..attr('class', 'node enter');
 
-    svgNodes.each((u) {
-      var attrs = g.node(u),
-          domNode = new d3.Selection.node(this);
+    svgNodes.each((Element node, Object u, int i, int j) {
+      final attrs = g.node(u),
+          domNode = new d3.Selection.node(node);
       addLabel(attrs, domNode, true, 10, 10);
     });
 
@@ -160,27 +161,27 @@ class Renderer {
     return svgNodes;
   }
 
-  drawEdgeLabels(g, root) {
-    var svgEdgeLabels = root
+  drawEdgeLabels(BaseGraph g, d3.Selection root) {
+    d3.Selection svgEdgeLabels = root
       .selectAll('g.edgeLabel')
-      .classed('enter', false)
-      .data(g.edges(), (e) { return e; });
+      ..classed('enter', false)
+      ..data(g.edges(), (_, e, i) { return e; });
 
     svgEdgeLabels.selectAll('*').remove();
 
     svgEdgeLabels
       .enter()
         .append('g')
-          .style('opacity', 0)
-          .attr('class', 'edgeLabel enter');
+          ..style('opacity', 0)
+          ..attr('class', 'edgeLabel enter');
 
-    svgEdgeLabels.each((e) {
-      addLabel(g.edge(e), new d3.Selection.node(this), false, 0, 0);
+    svgEdgeLabels.each((Element node, Object e, int i, int j) {
+      addLabel(g.edge(e), new d3.Selection.node(node), false, 0, 0);
     });
 
     this.transition(svgEdgeLabels.exit())
-        .style('opacity', 0)
-        .remove();
+        ..style('opacity', 0)
+        ..remove();
 
     return svgEdgeLabels;
   }
@@ -197,9 +198,9 @@ class Renderer {
       createArrowhead = null;
     } else if (g.graph().arrowheadFix != 'false' && g.graph().arrowheadFix != false) {
       createArrowhead() {
-        var strokeColor = new d3.Selection.node(this).style('stroke');
+        var strokeColor = new d3.Selection.node(this).nodeStyle('stroke');
         if (strokeColor) {
-          var id = 'arrowhead-' + strokeColor.replace(r"[^a-zA-Z0-9]"/*g*/, '_');
+          var id = 'arrowhead-' + strokeColor.replaceAll(r"[^a-zA-Z0-9]"/*g*/, '_');
           getOrMakeArrowhead(root, id).style('fill', strokeColor);
           return 'url(#' + id + ')';
         }
@@ -350,23 +351,23 @@ class Renderer {
     }
   }
 
-  addLabel(node, root, addingNode, marginX, marginY) {
+  addLabel(Map node, d3.Selection root, bool addingNode, num marginX, num marginY) {
     // If the node has 'useDef' meta data, we rely on that
-    if (node.useDef) {
-      root.append('use').attr('xlink:href', '#' + node.useDef);
+    if (node.containsKey('useDef') && node['useDef']) {
+      root.append('use').attr('xlink:href', '#' + node['useDef']);
       return;
     }
     // Add the rect first so that it appears behind the label
-    var label = node.label;
+    var label = node['label'];
     var rect = root.append('rect');
-    if (node.width) {
-      rect.attr('width', node.width);
+    if (node.containsKey('width')) {
+      rect.attr('width', node['width']);
     }
-    if (node.height) {
-      rect.attr('height', node.height);
+    if (node.containsKey('height')) {
+      rect.attr('height', node['height']);
     }
 
-    var labelSvg = root.append('g'),
+    d3.Selection labelSvg = root.append('g'),
         innerLabelSvg;
 
     // Allow the label to be a string, a function that returns a DOM element, or
@@ -379,9 +380,9 @@ class Renderer {
       } else {
         innerLabelSvg = addTextLabel(label,
                                      labelSvg,
-                                     node.labelCols.floor(),
-                                     node.labelCut);
-        applyStyle(node.labelStyle, innerLabelSvg);
+                                     node['labelCols'].floor(),
+                                     node['labelCut']);
+        applyStyle(node['labelStyle'], innerLabelSvg);
       }
     } else if (label is Function) {
       addForeignObjectElementFunction(label, labelSvg);
@@ -393,15 +394,15 @@ class Renderer {
       marginX = marginY = 0;
     }
 
-    var labelBBox = labelSvg.node().getBBox();
+    final labelBBox = labelSvg.node.getBBox();
     labelSvg.attr('transform',
-                  'translate(' + (-labelBBox.width / 2) + ',' + (-labelBBox.height / 2) + ')');
+                  'translate(${-labelBBox.width / 2},${-labelBBox.height / 2})');
 
-    var bbox = root.node().getBBox();
+    final bbox = root.node.getBBox();
 
     rect
-      .attr('rx', node.rx ? node.rx : 5)
-      .attr('ry', node.ry ? node.ry : 5)
+      .attr('rx', node.containsKey('rx') ? node['rx'] : 5)
+      .attr('ry', node.containsKey('ry') ? node['ry'] : 5)
       .attr('x', -(bbox.width / 2 + marginX))
       .attr('y', -(bbox.height / 2 + marginY))
       .attr('width', bbox.width + 2 * marginX)
@@ -409,29 +410,29 @@ class Renderer {
       .attr('fill', '#fff');
 
     if (addingNode) {
-      applyStyle(node.style, rect);
+      applyStyle(node['style'], rect);
 
-      if (node.fill) {
-        rect.style('fill', node.fill);
+      if (node.containsKey('fill')) {
+        rect.style('fill', node['fill']);
       }
 
-      if (node.stroke) {
-        rect.style('stroke', node.stroke);
+      if (node.containsKey('stroke')) {
+        rect.style('stroke', node['stroke']);
       }
 
-      if (node['stroke-width']) {
+      if (node.containsKey('stroke-width')) {
         rect.style('stroke-width', node['stroke-width'] + 'px');
       }
 
-      if (node['stroke-dasharray']) {
+      if (node.containsKey('stroke-dasharray')) {
         rect.style('stroke-dasharray', node['stroke-dasharray']);
       }
 
-      if (node.href) {
+      if (node.containsKey('href')) {
         root
-          .attr('class', root.attr('class') + ' clickable')
+          .attr('class', root.nodeAttr('class') + ' clickable')
           .on('click', () {
-            window.open(node.href);
+            window.open(node['href']);
           });
       }
     }
@@ -461,23 +462,23 @@ class Renderer {
       .attr('height', h);
   }
 
-  addForeignObjectLabel(label, root) {
+  addForeignObjectLabel(String label, d3.Selection root) {
     addForeignObject((e) {
       e.html(() { return label; });
     }, root);
   }
 
-  addForeignObjectElementFunction(elemFunc, root) {
+  addForeignObjectElementFunction(Function elemFunc, d3.Selection root) {
     addForeignObject((e) {
       e.insert(elemFunc);
     }, root);
   }
 
-  addForeignObjectElement(elem, root) {
+  addForeignObjectElement(Map elem, d3.Selection root) {
     addForeignObjectElementFunction(() { return elem; }, root);
   }
 
-  addTextLabel(label, root, labelCols, labelCut) {
+  addTextLabel(String label, d3.Selection root, num labelCols, bool labelCut) {
     if (labelCut == null) { labelCut = 'false'; }
     labelCut = (labelCut.toString().toLowerCase() == 'true');
 
@@ -886,10 +887,11 @@ isComposite(g, u) {
     return func.apply(thisArg, arguments);
   };
 }*/
-
+/*
 applyStyle(style, domNode) {
   if (style) {
     var currStyle = domNode.attr('style') || '';
     domNode.attr('style', currStyle + '; ' + style);
   }
 }
+*/
