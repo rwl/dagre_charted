@@ -2,11 +2,11 @@ library dagre.d3;
 
 import 'dart:html' show Element, window;
 import 'dart:math' as Math;
-import 'dart:svg' as svg;
+import 'dart:svg' show SvgElement;
 
 import 'package:graphlib/graphlib.dart';
 import 'package:dagre/src/dagre.dart';
-import 'package:d3/d3.dart' as d3;
+import 'package:charted/charted.dart';
 
 //var layout = require('dagre').layout;
 //
@@ -19,7 +19,7 @@ class Renderer {
   // Set up defaults...
   final layout = new Layout();
 
-  String edgeInterpolate = 'bundle';
+  LineInterpolator edgeInterpolate;// = 'bundle';
 
   double edgeTension = 0.95;
 
@@ -132,137 +132,195 @@ class Renderer {
     return this;
   }*/
 
-  d3.Selection drawNodes(BaseGraph g, d3.Selection root) {
+  BaseGraph run(BaseGraph graph, SelectionScope orgSvg) {
+    // First copy the input graph so that it is not changed by the rendering
+    // process.
+    graph = copyAndInitGraph(graph);
+
+    // Create zoom elements.
+    final svg = zoomSetup(graph, orgSvg);
+
+    // Create layers
+    svg
+      .selectAll('g.edgePaths, g.edgeLabels, g.nodes')
+      .data(['edgePaths', 'edgeLabels', 'nodes'])
+      .enter
+        .append('g')
+        .attrWithCallback('class', (d, ei, c) { return d; });
+
+    // Create node and edge roots, attach labels, and capture dimension
+    // information for use with layout.
+    final svgNodes = drawNodes(graph, svg.select('g.nodes'));
+    final svgEdgeLabels = drawEdgeLabels(graph, svg.select('g.edgeLabels'));
+
+    svgNodes.each((u, int ei, Element node) {
+      calculateDimensions(node, graph.node(u));
+    });
+    svgEdgeLabels.each((e, int ei, Element node) {
+      calculateDimensions(node, graph.edge(e));
+    });
+
+    // Now apply the layout function
+    BaseGraph result = runLayout(graph, layout);
+
+    // Copy useDef attribute from input graph to output graph
+    graph.eachNode((u, Map a) {
+      if (a.containsKey('useDef')) {
+        result.node(u)['useDef'] = a['useDef'];
+      }
+    });
+
+    // Run any user-specified post layout processing
+    postLayout(result, svg);
+
+    final svgEdgePaths = drawEdgePaths(graph, svg.select('g.edgePaths'));
+
+    // Apply the layout information to the graph
+    positionNodes(result, svgNodes);
+    positionEdgeLabels(result, svgEdgeLabels);
+    positionEdgePaths(result, svgEdgePaths, orgSvg);
+
+    postRender(result, svg);
+
+    return result;
+  }
+
+  Selection drawNodes(BaseGraph g, Selection root) {
     final nodes = g.nodes().where((u) { return !g.isCompound(); });
 
-    final svgNodes = root
+    final svgNodes = (root
       .selectAll('g.node')
-      ..classed('enter', false)
-      ..data(nodes, (_, u, i) { return u; });
+      ..classed('enter', false))
+      .data(nodes, (u) { return u; });
 
     svgNodes.selectAll('*').remove();
 
     svgNodes
-      .enter()
+      .enter
         .append('g')
           ..style('opacity', 0)
           ..attr('class', 'node enter');
 
-    svgNodes.each((Element node, Object u, int i, int j) {
+    svgNodes.each((u, int ei, Element node) {
       final attrs = g.node(u),
-          domNode = new d3.Selection.node(node);
+          domNode = new SelectionScope.element(node);
       addLabel(attrs, domNode, true, 10, 10);
     });
 
-    this.transition(svgNodes.exit())
+    this.transition(svgNodes.exit)
         ..style('opacity', 0)
         ..remove();
 
     return svgNodes;
   }
 
-  d3.Selection drawEdgeLabels(BaseGraph g, d3.Selection root) {
-    d3.Selection svgEdgeLabels = root
+  Selection drawEdgeLabels(BaseGraph g, Selection root) {
+    final svgEdgeLabels = (root
       .selectAll('g.edgeLabel')
-      ..classed('enter', false)
-      ..data(g.edges(), (_, e, i) { return e; });
+      ..classed('enter', false))
+      .data(g.edges(), (e) { return e; });
 
     svgEdgeLabels.selectAll('*').remove();
 
     svgEdgeLabels
-      .enter()
+      .enter
         .append('g')
           ..style('opacity', 0)
           ..attr('class', 'edgeLabel enter');
 
-    svgEdgeLabels.each((Element node, Object e, int i, int j) {
-      addLabel(g.edge(e), new d3.Selection.node(node), false, 0, 0);
+    svgEdgeLabels.each((e, int ei, Element node) {
+      addLabel(g.edge(e), new SelectionScope.element(node), false, 0, 0);
     });
 
-    this.transition(svgEdgeLabels.exit())
+    this.transition(svgEdgeLabels.exit)
         ..style('opacity', 0)
         ..remove();
 
     return svgEdgeLabels;
   }
 
-  Object drawEdgePaths(BaseGraph g, d3.Selection root) {
-    d3.Selection svgEdgePaths = root
+  Object drawEdgePaths(BaseGraph g, Selection root) {
+    final svgEdgePaths = (root
       .selectAll('g.edgePath')
-      ..classed('enter', false)
-      ..data(g.edges(), (n, e, i) { return e; });
+      ..classed('enter', false))
+      .data(g.edges(), (e) { return e; });
+
+    (svgEdgePaths
+      .enter
+        .append('g')
+          ..attr('class', 'edgePath enter'))
+          .append('path')
+            .style('opacity', 0);
+
+    final paths = svgEdgePaths
+      .selectAll('path')
+      ..each((e, int ei, Element node) {
+        applyStyle(g.edge(e).style, new SelectionScope.element(node));
+      });
+      //..attr('marker-end', createArrowhead);
 
     const DEFAULT_ARROWHEAD = 'url(#arrowhead)';
-    var createArrowhead = DEFAULT_ARROWHEAD;
+    /*var createArrowhead = DEFAULT_ARROWHEAD;
     if (!g.isDirected()) {
       createArrowhead = null;
-    } else if (g.graph()['arrowheadFix'] != 'false' && g.graph()['arrowheadFix'] != false) {
-      createArrowhead = (Element node, Object data, int i, int j) {
-        var strokeColor = new d3.Selection.node(node).nodeStyle('stroke');
-        if (strokeColor) {
+    } else */if (g.graph()['arrowheadFix'] != 'false' && g.graph()['arrowheadFix'] != false) {
+      createArrowhead(d, int ei, Element node) {
+        var strokeColor = new SelectionScope.element(node).root.attributes['stroke'];
+        if (strokeColor != null) {
           var id = 'arrowhead-' + strokeColor.replaceAll(r"[^a-zA-Z0-9]"/*g*/, '_');
           getOrMakeArrowhead(root, id).style('fill', strokeColor);
           return 'url(#' + id + ')';
         }
         return DEFAULT_ARROWHEAD;
       };
+      paths.attrWithCallback('marker-end', createArrowhead);
+    } else if (g.isDirected()) {
+      paths.attr('marker-end', DEFAULT_ARROWHEAD);
     }
 
-    svgEdgePaths
-      .enter()
-        .append('g')
-          .attr('class', 'edgePath enter')
-          .append('path')
-            .style('opacity', 0);
-
-    svgEdgePaths
-      .selectAll('path')
-      ..each((Element node, Object e, int i, int j) {
-        applyStyle(g.edge(e).style, new d3.Selection.node(node));
-      })
-      ..attr('marker-end', createArrowhead);
-
-    this.transition(svgEdgePaths.exit())
+    this.transition(svgEdgePaths.exit)
         ..style('opacity', 0)
         ..remove();
 
     return svgEdgePaths;
   }
 
-  void positionNodes(BaseGraph g, d3.Selection svgNodes) {
-    transform(Element node, Object u, int i, int j) {
+  void positionNodes(BaseGraph g, Selection svgNodes) {
+    transform(u, int ei, Element node) {
       Map value = g.node(u);
       return 'translate(${value['x']},${value['y']})';
     }
 
-    // For entering nodes, position immediately without transition
+    // For entering nodes, position immediately without transition.
     svgNodes.filter('.enter').attr('transform', transform);
 
     this.transition(svgNodes)
         ..style('opacity', 1)
-        ..attrFunc('transform', transform);
+        ..attrWithCallback('transform', transform);
   }
 
-  void positionEdgeLabels(BaseGraph g, d3.Selection svgEdgeLabels) {
-    transform(Element node, Object e, int i, int j) {
-      var value = g.edge(e);
-      var point = findMidPoint(value.points);
+  void positionEdgeLabels(BaseGraph g, Selection svgEdgeLabels) {
+    transform(e, int ei, Element node) {
+      Map value = g.edge(e);
+      final point = findMidPoint(value['points']);
       return 'translate(${point.x},${point.y})';
     }
 
-    // For entering edge labels, position immediately without transition
-
+    // For entering edge labels, position immediately without transition.
     svgEdgeLabels.filter('.enter').attr('transform', transform);
+
     this.transition(svgEdgeLabels)
       ..style('opacity', 1)
-      ..attrFunc('transform', transform);
+      ..attrWithCallback('transform', transform);
   }
 
-  void positionEdgePaths(BaseGraph g, d3.Selection svgEdgePaths, d3.Selection root) {
-    final interpolate = this.edgeInterpolate,
-        tension = this.edgeTension;
+  void positionEdgePaths(BaseGraph g, Selection svgEdgePaths, Selection root) {
+    const interpolatorName = 'edge_interpolator';
+//    final interpolate = this.edgeInterpolate,
+//        tension = this.edgeTension;
+    SvgLine.interpolators[interpolatorName] = this.edgeInterpolate;
 
-    calcPoints(Element node, Object e, int i, int j) {
+    calcPoints(e, int ei, Element node) {
       Map value = g.edge(e);
       Map source = g.node(g.incidentNodes(e)[0]);
       Map target = g.node(g.incidentNodes(e)[1]);
@@ -274,35 +332,37 @@ class Renderer {
       points.insert(0, intersectNode(source, p0, root));
       points.add(intersectNode(target, p1, root));
 
-      return (new d3.Line()
-        ..x = (d) { return d.x; }
-        ..y = (d) { return d.y; }
-        ..interpolate = interpolate
-        ..tension = tension)
-        .line(points);
+      return (new SvgLine()
+        ..xAccessor = (d, _) { return d.x; }
+        ..yAccessor = (d, _) { return d.y; }
+        ..interpolation = interpolatorName)
+//        ..tension = tension)
+        .path(points);
     }
 
+    // For entering edge paths, position immediately without transition.
     svgEdgePaths.filter('.enter').selectAll('path')
-        .attrFunc('d', calcPoints);
+        .attrWithCallback('d', calcPoints);
 
     this.transition(svgEdgePaths.selectAll('path'))
-        ..attr('d', calcPoints)
+        ..attrWithCallback('d', calcPoints)
         ..style('opacity', 1);
   }
 
-  // By default we do not use transitions
-  d3.Selection transition(d3.Selection selection) {
+  // By default we do not use transitions.
+  Selection transition(Selection selection) {
     return selection;
   }
 
-  // Setup dom for zooming
-  d3.Selection zoomSetup(BaseGraph graph, d3.Selection svg) {
-    d3.Selection root = svg.property('ownerSVGElement');
+  // Setup dom for zooming.
+  Selection zoomSetup(BaseGraph graph, SelectionScope svg) {
+    final owner = (svg.root as SvgElement).ownerSvgElement;
     // If the svg node is the root, we get null, so set to svg.
-    if (root == null) {
+    SelectionScope root;
+    if (owner == null) {
       root = svg;
     } else {
-      root = new d3.Selection.node(root);
+      root = new SelectionScope.element(owner);
     }
 
     if (root.select('rect.overlay').empty()) {
@@ -314,7 +374,7 @@ class Renderer {
         ..style('fill', 'none')
         ..style('pointer-events', 'all');
 
-      // Capture the zoom behaviour from the svg
+      // Capture the zoom behaviour from the svg.
       svg = svg.append('g')
         ..attr('class', 'zoom');
 
@@ -327,21 +387,21 @@ class Renderer {
     return svg;
   }
 
-  _zoom(d3.Selection root, BaseGraph g, d3.Selection svg) {
+  _zoom(Selection root, BaseGraph g, Selection svg) {
     // Do nothing
   }
 
   // By default allow pan and zoom.
-  zoom(BaseGraph graph, d3.Selection svg) {
-    if (zoomEnabled) {
-      var z = d3.behavior.zoom().on('zoom', () {
-        svg.attr('transform', 'translate(${d3.event.translate})scale(${d3.event.scale})');
-      });
-      z.scale(initialZoom).event(svg);
-    }
+  zoom(BaseGraph graph, Selection svg) {
+//    if (zoomEnabled) {
+//      var z = d3.behavior.zoom().on('zoom', () {
+//        svg.attr('transform', 'translate(${d3.event.translate})scale(${d3.event.scale})');
+//      });
+//      z.scale(initialZoom).event(svg);
+//    }
   }
 
-  postLayout(BaseGraph g, d3.Selection svg) {
+  postLayout(BaseGraph g, Selection svg) {
     // Do nothing
   }
 
@@ -353,7 +413,7 @@ class Renderer {
     }
   }
 
-  addLabel(Map node, d3.Selection root, bool addingNode, num marginX, num marginY) {
+  addLabel(Map node, SelectionScope root, bool addingNode, num marginX, num marginY) {
     // If the node has 'useDef' meta data, we rely on that
     if (node.containsKey('useDef')) {
       root.append('use').attr('xlink:href', '#${node['useDef']}');
@@ -361,7 +421,7 @@ class Renderer {
     }
     // Add the rect first so that it appears behind the label
     var label = node['label'];
-    d3.Selection rect = root.append('rect');
+    Selection rect = root.append('rect');
     if (node.containsKey('width')) {
       rect.attr('width', node['width']);
     }
@@ -369,8 +429,8 @@ class Renderer {
       rect.attr('height', node['height']);
     }
 
-    d3.Selection labelSvg = root.append('g'),
-        innerLabelSvg;
+    Selection labelSvg = root.append('g');//,
+//        innerLabelSvg;
 
     // Allow the label to be a string, a function that returns a DOM element, or
     // a DOM element itself.
@@ -380,7 +440,7 @@ class Renderer {
         // No margin for HTML elements
         marginX = marginY = 0;
       } else {
-        innerLabelSvg = addTextLabel(label,
+        final innerLabelSvg = addTextLabel(label,
                                      labelSvg,
                                      node['labelCols'].floor(),
                                      node['labelCut']);
@@ -432,7 +492,7 @@ class Renderer {
 
       if (node.containsKey('href')) {
         root
-          ..attr('class', root.nodeAttr('class') + ' clickable')
+          ..attr('class', root.root.attributes['class'] + ' clickable')
           ..on('click', () {
             window.open(node['href']);
           });
@@ -440,7 +500,7 @@ class Renderer {
     }
   }
 
-  void addForeignObject(modifier(d3.Selection e), d3.Selection root) {
+  void addForeignObject(modifier(Selection e), Selection root) {
     final fo = root
       .append('foreignObject')
         ..attr('width', '100000');
@@ -454,39 +514,39 @@ class Renderer {
     // TODO find a better way to get dimensions for foreignObjects...
     int w, h;
     div
-      .each((Element node, Object e, int i, int j) {
+      .each((e, int ei, Element node) {
         w = node.clientWidth;
         h = node.clientHeight;
       });
 
     fo
-      .attr('width', w)
-      .attr('height', h);
+      ..attr('width', w)
+      ..attr('height', h);
   }
 
-  addForeignObjectLabel(String label, d3.Selection root) {
-    addForeignObject((d3.Selection e) {
-      e.htmlFunc((n, d, i, j) { return label; });
+  addForeignObjectLabel(String label, Selection root) {
+    addForeignObject((Selection e) {
+      e.htmlWithCallback((d, ei, c) { return label; });
     }, root);
   }
 
-  addForeignObjectElementFunction(Function elemFunc, d3.Selection root) {
-    addForeignObject((d3.Selection e) {
-      e.insert(elemFunc);
+  addForeignObjectElementFunction(ChartedCallback<Element> elemFunc, Selection root) {
+    addForeignObject((Selection e) {
+      e.insert(tag, beforeFn: elemFunc);
     }, root);
   }
 
-  addForeignObjectElement(Map elem, d3.Selection root) {
-    addForeignObjectElementFunction(() {
+  addForeignObjectElement(Element elem, Selection root) {
+    addForeignObjectElementFunction((d, ei, c) {
       return elem;
     }, root);
   }
 
-  d3.Selection addTextLabel(String label, d3.Selection root, num labelCols, bool labelCut) {
+  Selection addTextLabel(String label, Selection root, num labelCols, bool labelCut) {
     if (labelCut == null) {
-      labelCut = 'false';
+      labelCut = false;//'false';
     }
-    labelCut = (labelCut.toString().toLowerCase() == 'true');
+//    labelCut = (labelCut.toString().toLowerCase() == 'true');
 
     final node = root
       .append('text')
@@ -505,59 +565,6 @@ class Renderer {
     }
 
     return node;
-  }
-
-  BaseGraph run(BaseGraph graph, d3.Selection orgSvg) {
-    // First copy the input graph so that it is not changed by the rendering
-    // process.
-    graph = copyAndInitGraph(graph);
-
-    // Create zoom elements.
-    final svg = zoomSetup(graph, orgSvg);
-
-    // Create layers
-    svg
-      .selectAll('g.edgePaths, g.edgeLabels, g.nodes')
-      .data(['edgePaths', 'edgeLabels', 'nodes'])
-      .enter()
-        ..append('g')
-        ..attr('class', (d) { return d; });
-
-    // Create node and edge roots, attach labels, and capture dimension
-    // information for use with layout.
-    final svgNodes = drawNodes(graph, svg.select('g.nodes'));
-    final svgEdgeLabels = drawEdgeLabels(graph, svg.select('g.edgeLabels'));
-
-    svgNodes.each((Element node, Object u, int i, int j) {
-      calculateDimensions(this, graph.node(u));
-    });
-    svgEdgeLabels.each((Element node, Object e, int i, int j) {
-      calculateDimensions(this, graph.edge(e));
-    });
-
-    // Now apply the layout function
-    BaseGraph result = runLayout(graph, layout);
-
-    // Copy useDef attribute from input graph to output graph
-    graph.eachNode((u, Map a) {
-      if (a.containsKey('useDef')) {
-        result.node(u)['useDef'] = a['useDef'];
-      }
-    });
-
-    // Run any user-specified post layout processing
-    postLayout(result, svg);
-
-    final svgEdgePaths = drawEdgePaths(graph, svg.select('g.edgePaths'));
-
-    // Apply the layout information to the graph
-    positionNodes(result, svgNodes);
-    positionEdgeLabels(result, svgEdgeLabels);
-    positionEdgePaths(result, svgEdgePaths, orgSvg);
-
-    postRender(result, svg);
-
-    return result;
   }
 }
 
@@ -635,7 +642,7 @@ isPolygon(obj) {
   return obj is svg.PolygonElement;
 }
 
-intersectNode(Map nd, p1, d3.Selection root) {
+intersectNode(Map nd, p1, Selection root) {
   if (nd.containsKey('useDef')) {
     var definedFig = root.select("defs #${nd['useDef']}").node;
     if (definedFig != null) {
@@ -652,11 +659,11 @@ intersectNode(Map nd, p1, d3.Selection root) {
 }
 
 
-d3.Selection getOrMakeArrowhead(d3.Selection root, id) {
-  d3.Selection search = root.select('#$id');
+Selection getOrMakeArrowhead(Selection root, id) {
+  Selection search = root.select('#$id');
   if (!search.empty()) { return search; }
 
-  d3.Selection defs = root.select('defs');
+  Selection defs = root.select('defs');
   if (defs.empty()) {
     defs = root.append('svg:defs');
   }
@@ -693,14 +700,14 @@ String wordwrap(String str, [num width=75, bool cut=false, String brk='\n']) {
   }).join(brk);
 }
 
-Map findMidPoint(List points) {
+Math.Point findMidPoint(List<Math.Point> points) {
   var midIdx = points.length / 2;
   if (points.length % 2 != 0) {
     return points[(midIdx).floor()];
   } else {
     var p0 = points[midIdx - 1];
     var p1 = points[midIdx];
-    return {'x': (p0.x + p1.x) / 2, 'y': (p0.y + p1.y) / 2};
+    return new Math.Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
   }
 }
 
@@ -901,11 +908,13 @@ intersectPolygon(Map node, Element polygon, Math.Point point) {
     return func.apply(thisArg, arguments);
   };
 }*/
-/*
-applyStyle(style, domNode) {
-  if (style) {
-    var currStyle = domNode.attr('style') || '';
-    domNode.attr('style', currStyle + '; ' + style);
+
+applyStyle(String style, SelectionScope domNode) {
+  if (style != null && style.length > 0) {
+    String currStyle = domNode.root.attributes['style'];
+    if (currStyle == null) {
+      currStyle = '';
+    }
+    domNode.root.attributes['style'] = currStyle + '; ' + style;
   }
 }
-*/

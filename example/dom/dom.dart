@@ -1,7 +1,7 @@
 import 'dart:html';
 
 import 'package:graphlib/graphlib.dart';
-import 'package:d3/d3.dart' as d3;
+import 'package:charted/charted.dart';
 import 'package:dagre_d3/renderer.dart';
 
 /**
@@ -15,7 +15,7 @@ main() {
   g.addNode("root", {
     'label': () {
       var table = document.createElement("table"),
-          tr = new d3.Selection.node(table).append("tr");
+          tr = new SelectionScope.element(table).append("tr");
       tr.append("td").text("A");
       tr.append("td").text("B");
       return table;
@@ -30,14 +30,14 @@ main() {
   final renderer = new Renderer();
 
   // Set up an SVG group so that we can translate the final graph.
-  final svg = new d3.Selection.selector('svg'),
+  final svg = new SelectionScope.selector('svg'),
       svgGroup = svg.append('g');
 
   // Run the renderer. This is what draws the final graph.
   final layout = renderer.run(g, svgGroup);
 
   // Center the graph.
-  var xCenterOffset = (int.parse(svg.nodeAttr('width')) - layout.graph()['width']) ~/ 2;
+  var xCenterOffset = (int.parse(svg.attr('width')) - layout.graph()['width']) ~/ 2;
   svgGroup.attr('transform', 'translate($xCenterOffset, 20)');
   svg.attr('height', layout.graph()['height'] + 40);
 }

@@ -3,7 +3,7 @@ import 'dart:html';
 
 import 'package:graphlib/graphlib.dart';
 import 'package:graphlib_dot/graphlib_dot.dart' as dot;
-import 'package:d3/d3.dart' as d3;
+import 'package:charted/charted.dart';
 import 'package:dagre_d3/renderer.dart';
 import 'package:dagre/dagre.dart';
 
@@ -38,14 +38,14 @@ main() {
   renderer.zoomEnabled = false;
 
   // Set up an SVG group so that we can translate the final graph.
-  final svg = new d3.Selection.selector('svg'),
+  final svg = new SelectionScope.selector('svg'),
       svgGroup = svg.append('g');
 
   // Run the renderer. This is what draws the final graph.
   var layout = renderer.run(g, svgGroup);
 
   // Center the graph.
-  var xCenterOffset = (num.parse(svg.nodeAttr('width')) - layout.graph()['width']) / 2;
+  var xCenterOffset = (num.parse(svg.attr('width')) - layout.graph()['width']) / 2;
   svgGroup.attr('transform', 'translate($xCenterOffset, 20)');
   svg.attr('height', layout.graph()['height'] + 40);
 }

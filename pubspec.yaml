@@ -1,6 +1,7 @@
 name: dagre_d3
 description: A D3-based renderer for Dagre
 dependencies:
+  charted: any
   dagre:
     path: ../dagre
   graphlib:
@@ -8,6 +9,3 @@ dependencies:
   graphlib_dot:
     path: ../graphlib_dot
   unittest: any
-dev_dependencies:
-  d3:
-    path: ../d3

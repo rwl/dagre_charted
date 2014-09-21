@@ -1,9 +1,9 @@
 import 'dart:math' as Math;
-import 'dart:html';
+import 'dart:html' show document, window;
 
 import 'package:graphlib/graphlib.dart';
 import 'package:graphlib_dot/graphlib_dot.dart' as dot;
-import 'package:d3/d3.dart' as d3;
+import 'package:charted/charted.dart';
 import 'package:dagre_d3/renderer.dart';
 import 'package:dagre/dagre.dart';
 
@@ -34,7 +34,7 @@ class InteractiveRenderer extends Renderer {
     }
   }
 
-  d3.Selection transition(d3.Selection selection) {
+  Selection transition(Selection selection) {
     return selection.transition().duration(500);
   }
 }
@@ -43,7 +43,7 @@ class InteractiveDemo {
   var inputGraph = document.querySelector("#inputGraph");
   var debugAlignment;
 
-  var graphLink = new d3.Selection.selector("#graphLink");
+  var graphLink = new SelectionScope.selector("#graphLink");
 
   var oldInputGraphValue;
 
@@ -77,7 +77,7 @@ class InteractiveDemo {
         graphLink.attr("href", graphToURL());
 
         // Cleanup old graph
-        var svg = new d3.Selection.selector("svg");
+        var svg = new SelectionScope.selector("svg");
 
         var renderer = new InteractiveRenderer(debugAlignment);
 

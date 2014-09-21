@@ -1,11 +1,11 @@
 
 import 'package:graphlib/graphlib.dart';
-import 'package:d3/d3.dart' as d3;
+import 'package:charted/charted.dart';
 import 'package:dagre_d3/renderer.dart';
 
 main() {
   // Set up an SVG group so that we can translate the final graph.
-  final svg = new d3.Selection.selector('svg'),
+  final svg = new SelectionScope.selector('svg'),
       svgGroup = svg.select('g');
 
   final g = new Digraph();

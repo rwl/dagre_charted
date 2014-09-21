@@ -1,7 +1,7 @@
 import 'dart:math' as Math;
 
 import 'package:graphlib/graphlib.dart';
-import 'package:d3/d3.dart' as d3;
+import 'package:charted/charted.dart';
 import 'package:dagre_d3/renderer.dart';
 import 'package:dagre/dagre.dart';
 
@@ -61,7 +61,7 @@ main() {
   final renderer = new Renderer()..initialZoom = initialScale;
 
   // Set up an SVG group so that we can translate the final graph.
-  var svg = new d3.Selection.selector('svg'),
+  var svg = new SelectionScope.selector('svg'),
       svgGroup = svg.append('g');
 
 //  var oldZoom = renderer.zoom();
@@ -78,7 +78,7 @@ main() {
   final layout = renderer.run(g, svgGroup);
 
   // Center the graph.
-  var xCenterOffset = (num.parse(svg.nodeAttr('width')) - layout.graph()['width'] * initialScale) ~/ 2;
+  var xCenterOffset = (num.parse(svg.attr('width')) - layout.graph()['width'] * initialScale) ~/ 2;
   svgGroup.attr('transform', 'translate($xCenterOffset, 20)');
   svg.attr('height', layout.graph()['height'] * initialScale + 40);
 }

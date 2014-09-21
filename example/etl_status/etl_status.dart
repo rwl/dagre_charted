@@ -1,7 +1,7 @@
 import 'dart:math' as Math;
 
 import 'package:graphlib/graphlib.dart';
-import 'package:d3/d3.dart' as d3;
+import 'package:charted/charted.dart';
 import 'package:dagre_d3/renderer.dart';
 import 'package:dagre/dagre.dart';
 
@@ -63,7 +63,7 @@ class EtlStatusRenderer extends Renderer {
   }
 
   // Custom transition function
-  d3.Selection transition(d3.Selection selection) {
+  Selection transition(Selection selection) {
     if (isUpdate) {
       return selection.transition().duration(500);
     }
@@ -114,7 +114,7 @@ draw(bool isUpdate) {
   }
 
   final renderer = new EtlStatusRenderer();
-  final svg = new d3.Selection.selector("svg");
+  final svg = new SelectionScope.selector("svg");
 
   // Extend drawNodes function to set custom ID and class on nodes
 //  var oldDrawNodes = renderer.drawNodes();
@@ -143,19 +143,19 @@ draw(bool isUpdate) {
     ..rankSep = 120
     ..rankDir = "LR";
   final renderedLayout = renderer
-    .run(decode(nodes, edges), new d3.Selection.selector("svg g"));
+    .run(decode(nodes, edges), new SelectionScope.selector("svg g"));
 
   // Zoom and scale to fit
   var zoomScale = zoom.scale();
   final graphWidth = renderedLayout.graph()['width'] + 80;
   final graphHeight = renderedLayout.graph()['height'] + 40;
-  final width = int.parse(svg.nodeStyle('width').replaceAll("px", ''));
-  final height = int.parse(svg.nodeStyle('height').replaceAll("px", ''));
+  final width = int.parse(svg.style('width').replaceAll("px", ''));
+  final height = int.parse(svg.style('height').replaceAll("px", ''));
   zoomScale = Math.min(width / graphWidth, height / graphHeight);
   final translate = [(width/2) - ((graphWidth*zoomScale)/2), (height/2) - ((graphHeight*zoomScale)/2)];
   zoom.translate(translate);
   zoom.scale(zoomScale);
-  zoom.event(isUpdate ? svg.transition().duration(500) : new d3.Selection.selector('svg'));
+  zoom.event(isUpdate ? svg.transition().duration(500) : new SelectionScope.selector('svg'));
 }
 
 final r = new Math.Random();

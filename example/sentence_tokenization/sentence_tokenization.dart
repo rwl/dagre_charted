@@ -1,21 +1,21 @@
 import 'dart:math' as Math;
 
 import 'package:graphlib/graphlib.dart';
-import 'package:d3/d3.dart' as d3;
+import 'package:charted/charted.dart';
 import 'package:dagre_d3/renderer.dart';
 import 'package:dagre/dagre.dart';
 
 class SentenceTokenizationRenderer extends Renderer {
   drawNodes(graph, root) {
     var svgNodes = super.drawNodes(graph, root);
-    svgNodes.each((u) {
-      new d3.Selection.node(this).classed(graph.node(u)['nodeclass'], true);
+    svgNodes.each((u, int ei, node) {
+      new SelectionScope.element(node).classed(graph.node(u)['nodeclass'], true);
     });
     return svgNodes;
   }
 
   // Disable pan and zoom.
-//  zoom(BaseGraph graph, d3.Selection svg) {}
+//  zoom(BaseGraph graph, Selection svg) {}
 }
 
 main() {
@@ -73,11 +73,11 @@ main() {
   renderer.zoomEnabled = false;
 
   // Set up an SVG group so that we can translate the final graph.
-  final svg = new d3.Selection.selector('svg'),
+  final svg = new SelectionScope.selector('svg'),
       svgGroup = svg.append('g');
 
   // Run the renderer. This is what draws the final graph.
-  final layout = renderer.run(g, new d3.Selection.selector('svg g'));
+  final layout = renderer.run(g, new SelectionScope.selector('svg g'));
 
   // Center the graph
   var xCenterOffset = (num.parse(svg.nodeAttr('width')) - layout.graph().width) ~/ 2;
