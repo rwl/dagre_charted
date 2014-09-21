@@ -2,7 +2,7 @@ library dagre.d3;
 
 import 'dart:html' show Element, window;
 import 'dart:math' as Math;
-import 'dart:svg' show SvgElement;
+import 'dart:svg' show SvgElement, PolygonElement, EllipseElement, CircleElement;
 
 import 'package:graphlib/graphlib.dart';
 import 'package:dagre/src/dagre.dart';
@@ -27,112 +27,9 @@ class Renderer {
 
   double initialZoom = 1.0;
 
-  Renderer() {
-//    this.drawNodes(defaultDrawNodes);
-//    this.drawEdgeLabels(defaultDrawEdgeLabels);
-//    this.drawEdgePaths(defaultDrawEdgePaths);
-//    this.positionNodes(defaultPositionNodes);
-//    this.positionEdgeLabels(defaultPositionEdgeLabels);
-//    this.positionEdgePaths(defaultPositionEdgePaths);
-//    this.zoomSetup(defaultZoomSetup);
-//    this.zoom(defaultZoom);
-//    this.transition(defaultTransition);
-//    this.postLayout(defaultPostLayout);
-//    this.postRender(defaultPostRender);
+  Renderer();
 
-//    this.edgeInterpolate('bundle');
-//    this.edgeTension(0.95);
-  }
-
-  /*layout(layout) {
-    if (!arguments.length) { return this._layout; }
-    this._layout = layout;
-    return this;
-  }*/
-
-//  drawNodes(drawNodes) {
-//    if (!arguments.length) { return this._drawNodes; }
-//    this._drawNodes = bind(drawNodes, this);
-//    return this;
-//  }
-//
-//  drawEdgeLabels(drawEdgeLabels) {
-//    if (!arguments.length) { return this._drawEdgeLabels; }
-//    this._drawEdgeLabels = bind(drawEdgeLabels, this);
-//    return this;
-//  }
-//
-//  drawEdgePaths(drawEdgePaths) {
-//    if (!arguments.length) { return this._drawEdgePaths; }
-//    this._drawEdgePaths = bind(drawEdgePaths, this);
-//    return this;
-//  }
-//
-//  positionNodes(positionNodes) {
-//    if (!arguments.length) { return this._positionNodes; }
-//    this._positionNodes = bind(positionNodes, this);
-//    return this;
-//  }
-//
-//  positionEdgeLabels(positionEdgeLabels) {
-//    if (!arguments.length) { return this._positionEdgeLabels; }
-//    this._positionEdgeLabels = bind(positionEdgeLabels, this);
-//    return this;
-//  }
-//
-//  positionEdgePaths(positionEdgePaths) {
-//    if (!arguments.length) { return this._positionEdgePaths; }
-//    this._positionEdgePaths = bind(positionEdgePaths, this);
-//    return this;
-//  }
-
-//  transition(transition) {
-//    if (!arguments.length) { return this._transition; }
-//    this._transition = bind(transition, this);
-//    return this;
-//  }
-
-//  zoomSetup(zoomSetup) {
-//    if (!arguments.length) { return this._zoomSetup; }
-//    this._zoomSetup = bind(zoomSetup, this);
-//    return this;
-//  }
-//
-//  zoom(zoom) {
-//    if (!arguments.length) { return this._zoom; }
-//    if (zoom) {
-//      this._zoom = bind(zoom, this);
-//    } else {
-//      this.remove(_zoom);
-//    }
-//    return this;
-//  }
-
-//  postLayout(postLayout) {
-//    if (!arguments.length) { return this._postLayout; }
-//    this._postLayout = bind(postLayout, this);
-//    return this;
-//  }
-//
-//  postRender(postRender) {
-//    if (!arguments.length) { return this._postRender; }
-//    this._postRender = bind(postRender, this);
-//    return this;
-//  }
-
-  /*edgeInterpolate(edgeInterpolate) {
-    if (!arguments.length) { return this._edgeInterpolate; }
-    this._edgeInterpolate = edgeInterpolate;
-    return this;
-  }
-
-  edgeTension(edgeTension) {
-    if (!arguments.length) { return this._edgeTension; }
-    this._edgeTension = edgeTension;
-    return this;
-  }*/
-
-  BaseGraph run(BaseGraph graph, SelectionScope orgSvg) {
+  BaseGraph run(BaseGraph graph, Selection orgSvg) {
     // First copy the input graph so that it is not changed by the rendering
     // process.
     graph = copyAndInitGraph(graph);
@@ -198,7 +95,7 @@ class Renderer {
     svgNodes
       .enter
         .append('g')
-          ..style('opacity', 0)
+          ..style('opacity', '0')
           ..attr('class', 'node enter');
 
     svgNodes.each((u, int ei, Element node) {
@@ -208,7 +105,7 @@ class Renderer {
     });
 
     this.transition(svgNodes.exit)
-        ..style('opacity', 0)
+        ..style('opacity', '0')
         ..remove();
 
     return svgNodes;
@@ -225,7 +122,7 @@ class Renderer {
     svgEdgeLabels
       .enter
         .append('g')
-          ..style('opacity', 0)
+          ..style('opacity', '0')
           ..attr('class', 'edgeLabel enter');
 
     svgEdgeLabels.each((e, int ei, Element node) {
@@ -233,13 +130,13 @@ class Renderer {
     });
 
     this.transition(svgEdgeLabels.exit)
-        ..style('opacity', 0)
+        ..style('opacity', '0')
         ..remove();
 
     return svgEdgeLabels;
   }
 
-  Object drawEdgePaths(BaseGraph g, Selection root) {
+  Selection drawEdgePaths(BaseGraph g, Selection root) {
     final svgEdgePaths = (root
       .selectAll('g.edgePath')
       ..classed('enter', false))
@@ -250,12 +147,12 @@ class Renderer {
         .append('g')
           ..attr('class', 'edgePath enter'))
           .append('path')
-            .style('opacity', 0);
+            .style('opacity', '0');
 
     final paths = svgEdgePaths
       .selectAll('path')
       ..each((e, int ei, Element node) {
-        applyStyle(g.edge(e).style, new SelectionScope.element(node));
+        applyStyle(g.edge(e)['style'], node);
       });
       //..attr('marker-end', createArrowhead);
 
@@ -264,22 +161,22 @@ class Renderer {
     if (!g.isDirected()) {
       createArrowhead = null;
     } else */if (g.graph()['arrowheadFix'] != 'false' && g.graph()['arrowheadFix'] != false) {
-      createArrowhead(d, int ei, Element node) {
-        var strokeColor = new SelectionScope.element(node).root.attributes['stroke'];
-        if (strokeColor != null) {
-          var id = 'arrowhead-' + strokeColor.replaceAll(r"[^a-zA-Z0-9]"/*g*/, '_');
-          getOrMakeArrowhead(root, id).style('fill', strokeColor);
-          return 'url(#' + id + ')';
-        }
-        return DEFAULT_ARROWHEAD;
-      };
-      paths.attrWithCallback('marker-end', createArrowhead);
+//      createArrowhead(d, int ei, Element node) {
+//        var strokeColor = style(node, 'stroke');
+//        if (strokeColor != null) {
+//          var id = 'arrowhead-' + strokeColor.replaceAll(r"[^a-zA-Z0-9]"/*g*/, '_');
+//          getOrMakeArrowhead(root, id).style('fill', strokeColor);
+//          return 'url(#$id)';
+//        }
+//        return DEFAULT_ARROWHEAD;
+//      };
+//      paths.attrWithCallback('marker-end', createArrowhead);
     } else if (g.isDirected()) {
       paths.attr('marker-end', DEFAULT_ARROWHEAD);
     }
 
     this.transition(svgEdgePaths.exit)
-        ..style('opacity', 0)
+        ..style('opacity', '0')
         ..remove();
 
     return svgEdgePaths;
@@ -292,10 +189,10 @@ class Renderer {
     }
 
     // For entering nodes, position immediately without transition.
-    svgNodes.filter('.enter').attr('transform', transform);
+//    svgNodes.filter('.enter').attr('transform', transform);
 
     this.transition(svgNodes)
-        ..style('opacity', 1)
+        ..style('opacity', '1')
         ..attrWithCallback('transform', transform);
   }
 
@@ -307,10 +204,10 @@ class Renderer {
     }
 
     // For entering edge labels, position immediately without transition.
-    svgEdgeLabels.filter('.enter').attr('transform', transform);
+//    svgEdgeLabels.filter('.enter').attr('transform', transform);
 
     this.transition(svgEdgeLabels)
-      ..style('opacity', 1)
+      ..style('opacity', '1')
       ..attrWithCallback('transform', transform);
   }
 
@@ -326,27 +223,27 @@ class Renderer {
       Map target = g.node(g.incidentNodes(e)[1]);
       List points = value['points'].toList();
 
-      var p0 = points.length == 0 ? target : points[0];
-      var p1 = points.length == 0 ? source : points[points.length - 1];
+      Map p0 = points.length == 0 ? target : points[0];
+      Map p1 = points.length == 0 ? source : points[points.length - 1];
 
       points.insert(0, intersectNode(source, p0, root));
       points.add(intersectNode(target, p1, root));
 
       return (new SvgLine()
-        ..xAccessor = (d, _) { return d.x; }
-        ..yAccessor = (d, _) { return d.y; }
+        ..xAccessor = (Map d, _) { return d['x']; }
+        ..yAccessor = (Map d, _) { return d['y']; }
         ..interpolation = interpolatorName)
 //        ..tension = tension)
-        .path(points);
+        .path(points, 0, null);
     }
 
     // For entering edge paths, position immediately without transition.
-    svgEdgePaths.filter('.enter').selectAll('path')
-        .attrWithCallback('d', calcPoints);
+//    svgEdgePaths.filter('.enter').selectAll('path')
+//        .attrWithCallback('d', calcPoints);
 
     this.transition(svgEdgePaths.selectAll('path'))
         ..attrWithCallback('d', calcPoints)
-        ..style('opacity', 1);
+        ..style('opacity', '1');
   }
 
   // By default we do not use transitions.
@@ -355,19 +252,20 @@ class Renderer {
   }
 
   // Setup dom for zooming.
-  Selection zoomSetup(BaseGraph graph, SelectionScope svg) {
-    final owner = (svg.root as SvgElement).ownerSvgElement;
-    // If the svg node is the root, we get null, so set to svg.
-    SelectionScope root;
-    if (owner == null) {
-      root = svg;
-    } else {
-      root = new SelectionScope.element(owner);
-    }
+  Selection zoomSetup(BaseGraph graph, Selection svg) {
+    var root = svg;
+//    final owner = (svg.first as SvgElement).ownerSvgElement;
+//    // If the svg node is the root, we get null, so set to svg.
+//    Selection root;
+//    if (owner == null) {
+//      root = svg;
+//    } else {
+//      root = new SelectionScope.element(owner);
+//    }
 
-    if (root.select('rect.overlay').empty()) {
+    if (root.select('rect.overlay').length == 0) {
       // Create an overlay for capturing mouse events that don't touch foreground
-      root.insert('rect', ':first-child')
+      root.insert('rect', before: ':first-child')
         ..attr('class', 'overlay')
         ..attr('width', '100%')
         ..attr('height', '100%')
@@ -435,32 +333,32 @@ class Renderer {
     // Allow the label to be a string, a function that returns a DOM element, or
     // a DOM element itself.
     if (label is String) {
-      if (label[0] == '<') {
+      if (label.startsWith('<')) {
         addForeignObjectLabel(label, labelSvg);
         // No margin for HTML elements
         marginX = marginY = 0;
       } else {
         final innerLabelSvg = addTextLabel(label,
                                      labelSvg,
-                                     node['labelCols'].floor(),
+                                     node['labelCols'],//.floor(),
                                      node['labelCut']);
-        applyStyle(node['labelStyle'], innerLabelSvg);
+        applyStyle(node['labelStyle'], innerLabelSvg.first);
       }
-    } else if (label is Function) {
+    } else if (label is ChartedCallback<Element>) {
       addForeignObjectElementFunction(label, labelSvg);
       // No margin for HTML elements
       marginX = marginY = 0;
-    } else if (label is Map) {
+    } else if (label is Element/*Map*/) {
       addForeignObjectElement(label, labelSvg);
       // No margin for HTML elements
       marginX = marginY = 0;
     }
 
-    final labelBBox = labelSvg.node.getBBox();
+    final labelBBox = labelSvg.first.getBoundingClientRect();//getBBox();
     labelSvg.attr('transform',
                   'translate(${-labelBBox.width / 2},${-labelBBox.height / 2})');
 
-    final bbox = root.node.getBBox();
+    final bbox = root.root.getBoundingClientRect();//getBBox();
 
     rect
       ..attr('rx', node.containsKey('rx') ? node['rx'] : 5)
@@ -472,7 +370,7 @@ class Renderer {
       ..attr('fill', '#fff');
 
     if (addingNode) {
-      applyStyle(node['style'], rect);
+      applyStyle(node['style'], rect.first);
 
       if (node.containsKey('fill')) {
         rect.style('fill', node['fill']);
@@ -491,10 +389,10 @@ class Renderer {
       }
 
       if (node.containsKey('href')) {
-        root
+        select(root)
           ..attr('class', root.root.attributes['class'] + ' clickable')
-          ..on('click', () {
-            window.open(node['href']);
+          ..on('click', (datum, int ei, Element c) {
+            window.open(node['href'], '');
           });
       }
     }
@@ -532,7 +430,7 @@ class Renderer {
 
   addForeignObjectElementFunction(ChartedCallback<Element> elemFunc, Selection root) {
     addForeignObject((Selection e) {
-      e.insert(tag, beforeFn: elemFunc);
+      e.insertWithCallback(elemFunc);
     }, root);
   }
 
@@ -608,7 +506,7 @@ Map copyObject(Map obj) {
 }
 
 calculateDimensions(Element group, Map value) {
-  var bbox = group.getBBox();
+  var bbox = group.getBoundingClientRect();//getBBox();
   value['width'] = bbox.width;
   value['height'] = bbox.height;
 }
@@ -627,29 +525,29 @@ BaseGraph runLayout(BaseGraph graph, Layout layout) {
   return result;
 }
 
-isEllipse(obj) {
-  //return Object.prototype.toString.call(obj) == '[object SVGEllipseElement]';
-  return obj is svg.EllipseElement;
-}
+//isEllipse(obj) {
+//  //return Object.prototype.toString.call(obj) == '[object SVGEllipseElement]';
+//  return obj is EllipseElement;
+//}
+//
+//isCircle(obj) {
+//  //return Object.prototype.toString.call(obj) == '[object SVGCircleElement]';
+//  return obj is CircleElement;
+//}
+//
+//isPolygon(obj) {
+//  //return Object.prototype.toString.call(obj) == '[object SVGPolygonElement]';
+//  return obj is PolygonElement;
+//}
 
-isCircle(obj) {
-  //return Object.prototype.toString.call(obj) == '[object SVGCircleElement]';
-  return obj is svg.CircleElement;
-}
-
-isPolygon(obj) {
-  //return Object.prototype.toString.call(obj) == '[object SVGPolygonElement]';
-  return obj is svg.PolygonElement;
-}
-
-intersectNode(Map nd, p1, Selection root) {
+intersectNode(Map nd, Map p1, Selection root) {
   if (nd.containsKey('useDef')) {
-    var definedFig = root.select("defs #${nd['useDef']}").node;
+    var definedFig = root.select("defs #${nd['useDef']}").first;
     if (definedFig != null) {
       var outerFig = definedFig.childNodes[0];
-      if (isCircle(outerFig) || isEllipse(outerFig)) {
+      if (outerFig is CircleElement || outerFig is EllipseElement) {
         return intersectEllipse(nd, outerFig, p1);
-      } else if (isPolygon(outerFig)) {
+      } else if (outerFig is PolygonElement) {
         return intersectPolygon(nd, outerFig, p1);
       }
     }
@@ -660,11 +558,11 @@ intersectNode(Map nd, p1, Selection root) {
 
 
 Selection getOrMakeArrowhead(Selection root, id) {
-  Selection search = root.select('#$id');
-  if (!search.empty()) { return search; }
+  final search = root.select('#$id');
+  if (search.length != 0) { return search; }
 
-  Selection defs = root.select('defs');
-  if (defs.empty()) {
+  var defs = root.select('defs');
+  if (defs.length != 0) {
     defs = root.append('svg:defs');
   }
 
@@ -700,10 +598,11 @@ String wordwrap(String str, [num width=75, bool cut=false, String brk='\n']) {
   }).join(brk);
 }
 
-Math.Point findMidPoint(List<Math.Point> points) {
+Math.Point findMidPoint(List/*<Math.Point>*/ points) {
   var midIdx = points.length / 2;
   if (points.length % 2 != 0) {
-    return points[(midIdx).floor()];
+    Map p = points[(midIdx).floor()];
+    return new Math.Point(p['x'], p['y']);
   } else {
     var p0 = points[midIdx - 1];
     var p1 = points[midIdx];
@@ -711,14 +610,14 @@ Math.Point findMidPoint(List<Math.Point> points) {
   }
 }
 
-intersectRect(Map rect, Math.Point point) {
+intersectRect(Map rect, Map point) {
   final x = rect['x'];
   final y = rect['y'];
 
   // Rectangle intersection algorithm from:
   // http://math.stackexchange.com/questions/108113/find-edge-between-two-boxes
-  final dx = point.x - x;
-  final dy = point.y - y;
+  final dx = point['x'] - x;
+  final dy = point['y'] - y;
   num w = rect['width'] / 2;
   num h = rect['height'] / 2;
 
@@ -742,31 +641,31 @@ intersectRect(Map rect, Math.Point point) {
   return {'x': x + sx, 'y': y + sy};
 }
 
-intersectEllipse(Map node, Element ellipseOrCircle, Math.Point point) {
+intersectEllipse(Map node, Element ellipseOrCircle, Map point) {
   // Formulae from: http://mathworld.wolfram.com/Ellipse-LineIntersection.html
 
   final cx = node['x'];
   final cy = node['y'];
   num rx, ry;
 
-  if (isCircle(ellipseOrCircle)) {
+  if (ellipseOrCircle is CircleElement) {
     rx = ry = ellipseOrCircle.r.baseVal.value;
-  } else {
+  } else if (ellipseOrCircle is EllipseElement) {
     rx = ellipseOrCircle.rx.baseVal.value;
     ry = ellipseOrCircle.ry.baseVal.value;
   }
 
-  final px = cx - point.x;
-  final py = cy - point.y;
+  final px = cx - point['x'];
+  final py = cy - point['y'];
 
   final det = Math.sqrt(rx * rx * py * py + ry * ry * px * px);
 
   num dx = (rx * ry * px / det).abs();
-  if (point.x < cx) {
+  if (point['x'] < cx) {
     dx = -dx;
   }
   var dy = (rx * ry * py / det).abs();
-  if (point.y < cy) {
+  if (point['y'] < cy) {
     dy = -dy;
   }
 
@@ -844,18 +743,18 @@ void intersectLine(num x1, num y1, num x2, num y2, num x3, num y3, num x4, num y
   addPoint(x, y, intersections);
 }
 
-intersectPolygon(Map node, Element polygon, Math.Point point) {
+intersectPolygon(Map node, PolygonElement polygon, Map point) {
   final x1 = node['x'];
   final y1 = node['y'];
-  final x2 = point.x;
-  final y2 = point.y;
+  final x2 = point['x'];
+  final y2 = point['y'];
 
   final intersections = [];
-  List points = polygon.points;
+  final points = polygon.points;
 
   num minx = 100000, miny = 100000;
-  for (int j = 0; j < points.length; j++) {
-    var p = points[j];
+  for (int j = 0; j < points.numberOfItems; j++) {
+    var p = points.getItem(j);
     minx = Math.min(minx, p.x);
     miny = Math.min(miny, p.y);
   }
@@ -863,9 +762,9 @@ intersectPolygon(Map node, Element polygon, Math.Point point) {
   final left = x1 - node['width'] / 2 - minx;
   final top =  y1 - node['height'] / 2 - miny;
 
-  for (var i = 0; i < points.length; i++) {
-    final p1 = points[i];
-    final p2 = points[i < points.length - 1 ? i + 1 : 0];
+  for (var i = 0; i < points.numberOfItems; i++) {
+    final p1 = points.getItem(i);
+    final p2 = points.getItem(i < points.numberOfItems - 1 ? i + 1 : 0);
     intersectLine(x1, y1, x2, y2, left + p1.x, top + p1.y, left + p2.x, top + p2.y, intersections);
   }
 
@@ -876,12 +775,12 @@ intersectPolygon(Map node, Element polygon, Math.Point point) {
   if (intersections.length > 1) {
     // More intersections, find the one nearest to edge end point
     intersections.sort((p, q) {
-      var pdx = p[0] - point.x,
-         pdy = p[1] - point.y,
+      var pdx = p[0] - point['x'],
+         pdy = p[1] - point['y'],
          distp = Math.sqrt(pdx * pdx + pdy * pdy),
 
-         qdx = q[0] - point.x,
-         qdy = q[1] - point.y,
+         qdx = q[0] - point['x'],
+         qdy = q[1] - point['y'],
          distq = Math.sqrt(qdx * qdx + qdy * qdy);
 
       return (distp < distq) ? -1 : (distp == distq ? 0 : 1);
@@ -909,12 +808,38 @@ intersectPolygon(Map node, Element polygon, Math.Point point) {
   };
 }*/
 
-applyStyle(String style, SelectionScope domNode) {
+applySelectionStyle(String style, Selection domNode) {
   if (style != null && style.length > 0) {
-    String currStyle = domNode.root.attributes['style'];
+    String currStyle = domNode.first.attributes['style'];
     if (currStyle == null) {
       currStyle = '';
     }
-    domNode.root.attributes['style'] = currStyle + '; ' + style;
+    domNode.first.attributes['style'] = currStyle + '; ' + style;
   }
+}
+
+applyStyle(String style, Element domNode) {
+  if (style != null && style.length > 0) {
+    String currStyle = domNode.attributes['style'];
+    if (currStyle == null) {
+      currStyle = '';
+    }
+    domNode.attributes['style'] = currStyle + '; ' + style;
+  }
+}
+
+
+//Selection insert(SelectionScope scope, String tag, String before) {
+//  var element = Namespace.createChildElement(tag, scope.root);
+//  var refElem = scope.root.querySelector(before);
+//  scope.root.insertBefore(element, refElem);
+//  return scope.selectElements([element]);
+//}
+
+style(Element elem, String name) {
+  return elem.getComputedStyle().getPropertyValue(name);
+}
+
+Selection select(SelectionScope scope) {
+  return scope.selectElements([scope.root]);
 }
