@@ -1,5 +1,7 @@
-name: dagre_d3
-description: A D3-based renderer for Dagre
+name: dagre_charted
+version: 0.0.1
+author: Richard Lincoln <r.w.lincoln@gmail.com>
+description: A Charted renderer for Dagre
 dependencies:
   charted: any
   dagre:
