@@ -2,7 +2,7 @@ import 'dart:html';
 
 import 'package:graphlib/graphlib.dart';
 import 'package:charted/charted.dart';
-import 'package:dagre_d3/renderer.dart';
+import 'package:dagre_charted/renderer.dart';
 
 /**
  * A sample showing how to use DOM nodes in a graph. Note that IE does not

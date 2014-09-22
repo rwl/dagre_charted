@@ -2,7 +2,7 @@ import 'dart:math' as Math;
 
 import 'package:graphlib/graphlib.dart';
 import 'package:charted/charted.dart';
-import 'package:dagre_d3/renderer.dart';
+import 'package:dagre_charted/renderer.dart';
 import 'package:dagre/dagre.dart';
 
 //class TcpStateDiagramRenderer extends Renderer {
@@ -20,15 +20,15 @@ import 'package:dagre/dagre.dart';
 
 main() {
   // States and transitions from RFC 793
-  var states = [ "LISTEN", "SYN RCVD", "SYN SENT",
+  List states = [ "LISTEN", "SYN RCVD", "SYN SENT",
                  "FINWAIT-1", "CLOSE WAIT", "FINWAIT-2",
                  "CLOSING", "LAST-ACK", "TIME WAIT" ]
            .map((s) {
               return { 'id': s, 'value': { 'label': s } };
-           });
+           }).toList();
 
   // Push a couple of states with custom styles
-  states.unshift({ 'id': 'CLOSED', 'value': { 'label': 'CLOSED', 'style': 'fill: #f77' } });
+  states.insert(0, { 'id': 'CLOSED', 'value': { 'label': 'CLOSED', 'style': 'fill: #f77' } });
   states.add({ 'id': 'ESTAB', 'value': { 'label': 'ESTAB', 'style': 'fill: #7f7' } });
 
   var edges = [
@@ -78,7 +78,7 @@ main() {
   final layout = renderer.run(g, svgGroup);
 
   // Center the graph.
-  var xCenterOffset = (num.parse(svg.attr('width')) - layout.graph()['width'] * initialScale) ~/ 2;
+  var xCenterOffset = (num.parse(svg.root.attributes['width']) - layout.graph()['width'] * initialScale) ~/ 2;
   svgGroup.attr('transform', 'translate($xCenterOffset, 20)');
-  svg.attr('height', layout.graph()['height'] * initialScale + 40);
+  svg.root.attributes['height'] = (layout.graph()['height'] * initialScale + 40).toString();
 }

@@ -2,7 +2,7 @@ import 'dart:html' show document, Element;
 
 import 'package:charted/charted.dart';
 import 'package:unittest/unittest.dart';
-import 'package:dagre_d3/renderer.dart';
+import 'package:dagre_charted/renderer.dart';
 import 'package:graphlib/graphlib.dart';
 
 class TestRenderer extends Renderer {

@@ -2,7 +2,7 @@ import 'dart:math' as Math;
 
 import 'package:graphlib/graphlib.dart';
 import 'package:charted/charted.dart';
-import 'package:dagre_d3/renderer.dart';
+import 'package:dagre_charted/renderer.dart';
 import 'package:dagre/dagre.dart';
 
 final Map<String, Map> workers = {

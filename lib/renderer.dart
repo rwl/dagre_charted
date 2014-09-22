@@ -499,8 +499,10 @@ BaseGraph copyAndInitGraph(BaseGraph graph) {
 
 Map copyObject(Map obj) {
   var copy = {};
-  for (var k in obj.keys) {
-    copy[k] = obj[k];
+  if (obj != null) {
+    for (var k in obj.keys) {
+      copy[k] = obj[k];
+    }
   }
   return copy;
 }
@@ -598,15 +600,15 @@ String wordwrap(String str, [num width=75, bool cut=false, String brk='\n']) {
   }).join(brk);
 }
 
-Math.Point findMidPoint(List/*<Math.Point>*/ points) {
-  var midIdx = points.length / 2;
+Math.Point findMidPoint(List<Map>/*<Math.Point>*/ points) {
+  int midIdx = points.length ~/ 2;
   if (points.length % 2 != 0) {
     Map p = points[(midIdx).floor()];
     return new Math.Point(p['x'], p['y']);
   } else {
     var p0 = points[midIdx - 1];
     var p1 = points[midIdx];
-    return new Math.Point((p0.x + p1.x) / 2, (p0.y + p1.y) / 2);
+    return new Math.Point((p0['x'] + p1['x']) / 2, (p0['y'] + p1['y']) / 2);
   }
 }
 

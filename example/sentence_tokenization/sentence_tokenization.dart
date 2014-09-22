@@ -1,15 +1,13 @@
-import 'dart:math' as Math;
 
 import 'package:graphlib/graphlib.dart';
 import 'package:charted/charted.dart';
-import 'package:dagre_d3/renderer.dart';
-import 'package:dagre/dagre.dart';
+import 'package:dagre_charted/renderer.dart';
 
 class SentenceTokenizationRenderer extends Renderer {
   drawNodes(graph, root) {
     var svgNodes = super.drawNodes(graph, root);
     svgNodes.each((u, int ei, node) {
-      new SelectionScope.element(node).classed(graph.node(u)['nodeclass'], true);
+      select(new SelectionScope.element(node)).classed(graph.node(u)['nodeclass'], true);
     });
     return svgNodes;
   }
@@ -73,14 +71,17 @@ main() {
   renderer.zoomEnabled = false;
 
   // Set up an SVG group so that we can translate the final graph.
-  final svg = new SelectionScope.selector('svg'),
-      svgGroup = svg.append('g');
+  final svg = new SelectionScope.selector('.wrapper')
+    .append('svg:svg')
+      ..attr('width', '960')
+      ..attr('height', '600');
+  final svgGroup = svg.append('g');
 
   // Run the renderer. This is what draws the final graph.
-  final layout = renderer.run(g, new SelectionScope.selector('svg g'));
+  final layout = renderer.run(g, svgGroup);
 
   // Center the graph
-  var xCenterOffset = (num.parse(svg.nodeAttr('width')) - layout.graph().width) ~/ 2;
+  var xCenterOffset = (num.parse(svg.first.attributes['width']) - layout.graph()['width']) ~/ 2;
   svgGroup.attr('transform', 'translate($xCenterOffset, 20)');
   svg.attr('height', layout.graph()['height'] + 40);
 }

@@ -4,7 +4,7 @@ import 'dart:html' show document, window;
 import 'package:graphlib/graphlib.dart';
 import 'package:graphlib_dot/graphlib_dot.dart' as dot;
 import 'package:charted/charted.dart';
-import 'package:dagre_d3/renderer.dart';
+import 'package:dagre_charted/renderer.dart';
 import 'package:dagre/dagre.dart';
 
 

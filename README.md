@@ -6,7 +6,7 @@ actual rendering using [Charted][].
 
 `dagre_charted` was ported to Dart from [dagre-d3](https://github.com/cpettitt/dagre-d3)
 by [Richard Lincoln](http://git.io/rwl).
-
+<!--
 ## Demo
 
 Try our [interactive demo](http://rwl.github.io/project/dagre_charted/latest/demo/interactive-demo.html)!
@@ -23,7 +23,7 @@ Or some of our other examples:
 
 These demos and more can be found in the `example` folder of the project. Simply
 open them in your browser - there is no need to start a web server.
-
+-->
 ## Using dagre_charted
 
 To use dagre_charted, there are a few basic steps:

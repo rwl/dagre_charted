@@ -1,11 +1,7 @@
-import 'dart:math' as Math;
-import 'dart:html';
 
 import 'package:graphlib/graphlib.dart';
-import 'package:graphlib_dot/graphlib_dot.dart' as dot;
 import 'package:charted/charted.dart';
-import 'package:dagre_d3/renderer.dart';
-import 'package:dagre/dagre.dart';
+import 'package:dagre_charted/renderer.dart';
 
 main() {
   // Create the input graph.
@@ -38,14 +34,17 @@ main() {
   renderer.zoomEnabled = false;
 
   // Set up an SVG group so that we can translate the final graph.
-  final svg = new SelectionScope.selector('svg'),
-      svgGroup = svg.append('g');
+  final svg = new SelectionScope.selector('.wrapper')
+    .append('svg:svg')
+      ..attr('width', '960')
+      ..attr('height', '600');
+  final svgGroup = svg.append('g');
 
   // Run the renderer. This is what draws the final graph.
   var layout = renderer.run(g, svgGroup);
 
   // Center the graph.
-  var xCenterOffset = (num.parse(svg.attr('width')) - layout.graph()['width']) / 2;
+  var xCenterOffset = (num.parse(svg.first.attributes['width']) - layout.graph()['width']) / 2;
   svgGroup.attr('transform', 'translate($xCenterOffset, 20)');
   svg.attr('height', layout.graph()['height'] + 40);
 }
