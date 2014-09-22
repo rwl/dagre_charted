@@ -4,7 +4,7 @@ Dagre is a Dart library that makes it easy to lay out directed graphs on
 the client-side. The dagre_charted library acts a front-end to dagre, providing
 actual rendering using [Charted][].
 
-`dagre_charted` was ported to Dart from [dagre_charted](https://github.com/cpettitt/dagre_charted)
+`dagre_charted` was ported to Dart from [dagre-d3](https://github.com/cpettitt/dagre-d3)
 by [Richard Lincoln](http://git.io/rwl).
 
 ## Demo
