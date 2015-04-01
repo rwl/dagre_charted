@@ -1,13 +1,11 @@
 name: dagre_charted
-version: 0.0.1
+version: 0.0.2
 author: Richard Lincoln <r.w.lincoln@gmail.com>
 description: A Charted renderer for Dagre
+homepage: https://github.com/rwl/dagre_charted
 dependencies:
-  charted: any
-  dagre:
-    path: ../dagre
-  graphlib:
-    path: ../graphlib
-  graphlib_dot:
-    path: ../graphlib_dot
-  unittest: any
+  charted: '>=0.0.1 <0.1.0'
+  dagre: '>=0.0.1 <0.1.0'
+  graphlib: '>=0.0.1 <0.1.0'
+  graphlib_dot: '>=0.0.1 <0.1.0'
+  unittest: '>=0.11.5+4 <0.12.0'

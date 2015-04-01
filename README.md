@@ -1,5 +1,7 @@
 # dagre_charted - A Charted renderer for Dagre
 
+## DEPRECATED (See [graphlib](https://pub.dartlang.org/packages/graphlib))
+
 Dagre is a Dart library that makes it easy to lay out directed graphs on
 the client-side. The dagre_charted library acts a front-end to dagre, providing
 actual rendering using [Charted][].
